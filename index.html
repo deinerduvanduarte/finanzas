@@ -160,7 +160,7 @@ body { font-family: 'DM Mono', monospace; background: var(--bg); color: var(--te
   <div class="card c-green"><div class="card-label">Ingresos</div><div class="card-val" id="totalIngresos">$0</div><div class="card-sub">este mes</div></div>
   <div class="card c-red"><div class="card-label">Gastos variables</div><div class="card-val" id="totalGastos">$0</div><div class="card-sub">este mes</div></div>
   <div class="card c-red2"><div class="card-label">Fijos pagados</div><div class="card-val" id="totalFijos">$0</div><div class="card-sub" id="subFijos">de $0 esperados</div></div>
-  <div class="card c-yellow"><div class="card-label">Ahorros</div><div class="card-val" id="totalAhorros">$0</div><div class="card-sub">movimientos + objetivos</div></div>
+  <div class="card c-yellow"><div class="card-label">Ahorros</div><div class="card-val" id="totalAhorros">$0</div><div class="card-sub">movimientos este mes</div></div>
 </div>
 
 <div class="remanente-bar">
@@ -435,7 +435,8 @@ function render(){
   document.getElementById('totalGastos').textContent='$'+gas.toLocaleString('es-CO');
   document.getElementById('totalFijos').textContent='$'+fp.toLocaleString('es-CO');
   document.getElementById('subFijos').textContent='de $'+fe.toLocaleString('es-CO')+' esperados';
-  document.getElementById('totalAhorros').textContent='$'+(aho+objAcum).toLocaleString('es-CO');
+  // Solo mostrar ahorros de movimientos en la card para evitar duplicado con objetivos
+  document.getElementById('totalAhorros').textContent='$'+aho.toLocaleString('es-CO');
   document.getElementById('totalRemanente').textContent='$'+rem.toLocaleString('es-CO');
   const mp=mesActual===0?11:mesActual-1;
   document.getElementById('remanenteMes').textContent='traído de '+MESES[mp];
@@ -475,10 +476,15 @@ function ff(f){ if(!f)return''; const[y,m,d]=f.split('-'); return d+'/'+m+'/'+y;
 // ── FIJOS ──────────────────────────────────────────────────────────
 function renderFijos(){
   const fijos=gf(mesActual,anioActual);
-  document.getElementById('listaFijos').innerHTML=fijos.map((f,i)=>`
+  const totalEsperado=fijos.reduce((s,f)=>s+f.monto,0);
+  const totalPagado=fijos.filter(f=>f.pagado).reduce((s,f)=>s+(f.real!==undefined?f.real:f.monto),0);
+  let html=fijos.map((f,i)=>`
     <div class="fijo-item" style="${f.pagado?'opacity:0.6':''}">
       <div style="flex:1">
-        <div class="fijo-nombre" style="${f.pagado?'text-decoration:line-through;color:var(--text2)':''}">${f.nombre}</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <div class="fijo-nombre" style="${f.pagado?'text-decoration:line-through;color:var(--text2)':''}; flex:1">${f.nombre}</div>
+          <button onclick="eliminarFijo(${i})" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:13px;padding:2px 6px" title="Eliminar">🗑</button>
+        </div>
         <div class="fijo-valores">
           <div><div class="fijo-lbl">Aprox.</div><div class="fijo-num">$${f.monto.toLocaleString('es-CO')}</div></div>
           <div style="color:var(--border);font-size:16px">→</div>
@@ -490,6 +496,35 @@ function renderFijos(){
       </div>
       <div class="fijo-check ${f.pagado?'pagado':''}" onclick="toggleFijo(${i})">${f.pagado?'✓':''}</div>
     </div>`).join('');
+
+  // Botón agregar nuevo fijo
+  html += `<div style="padding:0 16px;margin-bottom:8px">
+    <button onclick="agregarFijo()" style="width:100%;padding:12px;border-radius:11px;border:1px dashed var(--border);
+      background:transparent;color:var(--text2);font-family:'DM Mono',monospace;font-size:13px;cursor:pointer">
+      + Agregar gasto fijo
+    </button>
+  </div>`;
+
+  document.getElementById('listaFijos').innerHTML=html;
+}
+
+function eliminarFijo(i){
+  if(!confirm('¿Eliminar este gasto fijo?'))return;
+  const fijos=gf(mesActual,anioActual);
+  fijos.splice(i,1);
+  sf(fijos,mesActual,anioActual);
+  render();
+}
+
+function agregarFijo(){
+  const nombre=prompt('Nombre del gasto fijo:');
+  if(!nombre)return;
+  const monto=parseFloat(prompt('Monto aproximado:')||'0');
+  if(!monto)return;
+  const fijos=gf(mesActual,anioActual);
+  fijos.push({nombre,monto,real:monto,pagado:false});
+  sf(fijos,mesActual,anioActual);
+  render();
 }
 
 function toggleFijo(i){
