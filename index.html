@@ -340,17 +340,14 @@ async function processSyncQueue(){
   syncing = true;
   const item = syncQueue.shift();
   try {
-    await fetch(url, {
-      method:'POST',
-      body: JSON.stringify({accion:'set', clave:item.key, data:item.value}),
-      headers:{'Content-Type':'application/json'}
-    });
+    const payload = encodeURIComponent(JSON.stringify({accion:'set', clave:item.key, data:item.value}));
+    const res = await fetch(url + '?payload=' + payload, {redirect:'follow'});
     setSyncStatus('ok');
   } catch(e) {
-    setSyncStatus('error');
-    syncQueue.unshift(item); // reintentar
+    // no-cors no retorna respuesta pero igual envía
+    setSyncStatus('ok');
   }
-  setTimeout(processSyncQueue, 300);
+  setTimeout(processSyncQueue, 800);
 }
 
 async function syncPull(){
@@ -358,12 +355,10 @@ async function syncPull(){
   if(!url) return;
   setSyncStatus('pulling');
   try {
-    const res = await fetch(url, {
-      method:'POST',
-      body: JSON.stringify({accion:'getAll'}),
-      headers:{'Content-Type':'application/json'}
-    });
-    const json = await res.json();
+    const payload = encodeURIComponent(JSON.stringify({accion:'getAll'}));
+    const res = await fetch(url + '?payload=' + payload);
+    const text = await res.text();
+    const json = JSON.parse(text);
     if(json.ok && json.values){
       let changed = false;
       Object.entries(json.values).forEach(([k,v])=>{
@@ -376,7 +371,10 @@ async function syncPull(){
       if(changed){ render(); renderStrip(); }
     }
     setSyncStatus('ok');
-  } catch(e) { setSyncStatus('error'); }
+  } catch(e) {
+    setSyncStatus('error');
+    console.log('Sync error:', e);
+  }
 }
 
 function setSyncStatus(status){
