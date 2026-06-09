@@ -62,6 +62,7 @@ body { font-family: 'DM Mono', monospace; background: var(--bg); color: var(--te
 .mov-dot.ingreso { background: var(--green); }
 .mov-dot.gasto { background: var(--accent2); }
 .mov-dot.ahorro { background: var(--yellow); }
+.mov-dot.deuda { background: #ff6a9f; }
 .mov-info { flex: 1; }
 .mov-concepto { font-size: 13px; font-weight: 500; }
 .mov-meta { font-size: 11px; color: var(--text2); margin-top: 2px; }
@@ -69,6 +70,7 @@ body { font-family: 'DM Mono', monospace; background: var(--bg); color: var(--te
 .mov-monto.ingreso { color: var(--green); }
 .mov-monto.gasto { color: var(--accent2); }
 .mov-monto.ahorro { color: var(--yellow); }
+.mov-monto.deuda { color: #ff6a9f; }
 .mov-actions { display: flex; gap: 5px; margin-top: 5px; justify-content: flex-end; }
 .btn-icon { background: var(--surface2); border: 1px solid var(--border); color: var(--text2); padding: 3px 8px; border-radius: 5px; font-size: 11px; cursor: pointer; }
 .btn-icon:hover { border-color: var(--accent); color: var(--accent); }
@@ -118,6 +120,7 @@ body { font-family: 'DM Mono', monospace; background: var(--bg); color: var(--te
 .tipo-btn.ti { background: rgba(79,255,176,0.15); border-color: var(--green); color: var(--green); }
 .tipo-btn.tg { background: rgba(255,106,106,0.15); border-color: var(--accent2); color: var(--accent2); }
 .tipo-btn.ta { background: rgba(255,225,79,0.15); border-color: var(--yellow); color: var(--yellow); }
+.tipo-btn.td { background: rgba(255,106,106,0.15); border-color: #ff6a9f; color: #ff6a9f; }
 .btn-save { width: 100%; padding: 13px; border-radius: 11px; border: none; background: var(--accent); color: white; font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 8px; }
 .btn-cancel { width: 100%; padding: 11px; border-radius: 11px; border: 1px solid var(--border); background: transparent; color: var(--text2); font-family: 'DM Mono', monospace; font-size: 13px; cursor: pointer; margin-top: 8px; }
 .obj-select-btn { width: 100%; text-align: left; background: var(--surface2); border: 1px solid var(--border); color: var(--text); font-family: 'DM Mono', monospace; font-size: 13px; padding: 12px 14px; border-radius: 10px; cursor: pointer; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
@@ -179,6 +182,7 @@ body { font-family: 'DM Mono', monospace; background: var(--bg); color: var(--te
   <button class="tab" onclick="setTab('fijos',this)">Fijos</button>
   <button class="tab" onclick="setTab('objetivos',this)">Objetivos</button>
   <button class="tab" onclick="setTab('categorias',this)">Categorías</button>
+  <button class="tab" onclick="setTab('deudas',this)">Deudas</button>
 </div>
 
 <div id="tab-movimientos">
@@ -204,6 +208,11 @@ body { font-family: 'DM Mono', monospace; background: var(--bg); color: var(--te
   <div style="padding:0 16px" id="listaCategorias"></div>
 </div>
 
+<div id="tab-deudas" style="display:none">
+  <div class="section-title">💳 Deudas</div>
+  <div style="padding:0 16px" id="listaDeudas"></div>
+</div>
+
 <button class="fab" onclick="abrirModal()">+</button>
 
 <!-- MODAL MOVIMIENTO -->
@@ -216,6 +225,7 @@ body { font-family: 'DM Mono', monospace; background: var(--bg); color: var(--te
         <button class="tipo-btn" id="btn-ingreso" onclick="setTipo('ingreso')">💚 Ingreso</button>
         <button class="tipo-btn" id="btn-gasto" onclick="setTipo('gasto')">🔴 Gasto</button>
         <button class="tipo-btn" id="btn-ahorro" onclick="setTipo('ahorro')">💛 Ahorro</button>
+        <button class="tipo-btn" id="btn-deuda" onclick="setTipo('deuda')">💳 Deuda</button>
       </div>
     </div>
     <div class="form-group"><label class="form-label">Concepto</label><input class="form-input" id="inConcepto" placeholder="Ej: Empanadas, Gym, Sueldo..."/></div>
@@ -409,7 +419,7 @@ function calcSaldoMes(m,a){
   const data=gd(m,a);
   const movs=data.movimientos;
   const ing=movs.filter(x=>x.tipo==='ingreso').reduce((s,x)=>s+x.monto,0);
-  const gas=movs.filter(x=>x.tipo==='gasto').reduce((s,x)=>s+x.monto,0);
+  const gas=movs.filter(x=>x.tipo==='gasto'||x.tipo==='deuda').reduce((s,x)=>s+x.monto,0);
   const aho=movs.filter(x=>x.tipo==='ahorro').reduce((s,x)=>s+x.monto,0);
   const fijos=gf(m,a);
   const fp=fijos.filter(f=>f.pagado).reduce((s,f)=>s+(f.real!==undefined?f.real:f.monto),0);
@@ -421,7 +431,7 @@ function render(){
   const data=gd(mesActual,anioActual);
   const movs=[...data.movimientos].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
   const ing=movs.filter(x=>x.tipo==='ingreso').reduce((s,x)=>s+x.monto,0);
-  const gas=movs.filter(x=>x.tipo==='gasto').reduce((s,x)=>s+x.monto,0);
+  const gas=movs.filter(x=>x.tipo==='gasto'||x.tipo==='deuda').reduce((s,x)=>s+x.monto,0);
   const aho=movs.filter(x=>x.tipo==='ahorro').reduce((s,x)=>s+x.monto,0);
   const fijos=gf(mesActual,anioActual);
   const fp=fijos.filter(f=>f.pagado).reduce((s,f)=>s+(f.real!==undefined?f.real:f.monto),0);
@@ -453,7 +463,7 @@ function render(){
         <div class="mov-dot ${m.tipo}"></div>
         <div class="mov-info">
           <div class="mov-concepto">${m.concepto}</div>
-          <div class="mov-meta">${m.categoria} · ${m.metodo} · ${ff(m.fecha)}${m.objNombre?' · 🎯 '+m.objNombre:''}</div>
+          <div class="mov-meta">${m.categoria} · ${m.metodo} · ${ff(m.fecha)}${m.objNombre?' · 🎯 '+m.objNombre:''}${m.deudaNombre?' · 💳 '+m.deudaNombre:''}</div>
           ${m.obs?'<div class="mov-meta" style="color:var(--text)">'+m.obs+'</div>':''}
         </div>
         <div>
@@ -667,11 +677,12 @@ function renderCategorias(){
 function setTab(tab,btn){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   btn.classList.add('active');
-  ['movimientos','fijos','objetivos','categorias'].forEach(t=>{
+  ['movimientos','fijos','objetivos','categorias','deudas'].forEach(t=>{
     document.getElementById('tab-'+t).style.display=t===tab?'':'none';
   });
   if(tab==='objetivos') renderObjetivos();
   if(tab==='categorias') renderCategorias();
+  if(tab==='deudas') renderDeudas();
 }
 
 // ── MESES ──────────────────────────────────────────────────────────
@@ -792,11 +803,15 @@ function cerrarModal(id){ document.getElementById(id).classList.remove('open'); 
 
 function setTipo(tipo,catSel=null){
   tipoActual=tipo;
-  ['ingreso','gasto','ahorro'].forEach(t=>{
+  ['ingreso','gasto','ahorro','deuda'].forEach(t=>{
     const b=document.getElementById('btn-'+t);
     b.className='tipo-btn'+(t===tipo?' t'+t[0]:'');
   });
-  const cats=tipo==='ingreso'?CATS_INGRESO:tipo==='ahorro'?[...getObjs().map(o=>o.nombre),...CATS_AHORRO_BASE]:CATS_GASTO;
+  let cats;
+  if(tipo==='ingreso') cats=CATS_INGRESO;
+  else if(tipo==='ahorro') cats=[...getObjs().map(o=>o.nombre),...CATS_AHORRO_BASE];
+  else if(tipo==='deuda') cats=getDeudas().map(d=>d.nombre);
+  else cats=CATS_GASTO;
   const sel=document.getElementById('inCategoria');
   sel.innerHTML=cats.map(c=>`<option ${c===catSel?'selected':''}>${c}</option>`).join('');
 }
@@ -840,6 +855,20 @@ function guardarMov(){
   sd(data,mesActual,anioActual);
   cerrarModal('modalMov');
 
+  // Si es tipo deuda, asignar automáticamente a la deuda por nombre de categoría
+  if(tipoActual==='deuda'){
+    const deudas=getDeudas();
+    const idx=deudas.findIndex(d=>d.nombre===categoria);
+    if(idx>=0){
+      deudas[idx].pagado=(deudas[idx].pagado||0)+monto;
+      setDeudas(deudas);
+      const data2=gd(mesActual,anioActual);
+      const mi=data2.movimientos.findIndex(m=>m.id===mov.id);
+      if(mi>=0){ data2.movimientos[mi].deudaIdx=idx; data2.movimientos[mi].deudaNombre=deudas[idx].nombre; sd(data2,mesActual,anioActual); }
+    }
+    render(); return;
+  }
+
   if(tipoActual==='ahorro'){
     const objs=getObjs();
     if(objs.length>0){
@@ -854,7 +883,45 @@ function guardarMov(){
       return;
     }
   }
+
+  // Si es gasto con categoría Deudas, preguntar a qué deuda asignarlo
+  if(tipoActual==='gasto' && categoria==='Deudas'){
+    const deudas=getDeudas();
+    if(deudas.length>0){
+      pendingDeudaId=mov.id;
+      document.getElementById('objSubtitle').textContent='Pago de $'+monto.toLocaleString('es-CO')+' ¿A qué deuda lo asignamos?';
+      document.getElementById('objOpciones').innerHTML=deudas.map((d,i)=>`
+        <button class="obj-select-btn" onclick="seleccionarDeuda(${i})">
+          <span>${d.nombre}</span>
+          <span style="color:var(--accent2)">Falta $${Math.max(0,d.total-d.pagado).toLocaleString('es-CO')}</span>
+        </button>`).join('');
+      document.getElementById('modalObj').classList.add('open');
+      return;
+    }
+  }
+
   render();
+}
+
+let pendingDeudaId = null;
+
+function seleccionarDeuda(idx){
+  document.getElementById('modalObj').classList.remove('open');
+  if(idx>=0 && pendingDeudaId){
+    const deudas=getDeudas();
+    if(deudas[idx]){
+      const data=gd(mesActual,anioActual);
+      const mi=data.movimientos.findIndex(m=>m.id===pendingDeudaId);
+      if(mi>=0){
+        deudas[idx].pagado=(deudas[idx].pagado||0)+data.movimientos[mi].monto;
+        setDeudas(deudas);
+        data.movimientos[mi].deudaIdx=idx;
+        data.movimientos[mi].deudaNombre=deudas[idx].nombre;
+        sd(data,mesActual,anioActual);
+      }
+    }
+  }
+  pendingDeudaId=null; render();
 }
 
 function seleccionarObj(idx){
@@ -907,6 +974,113 @@ function guardarConfig(){
 ['modalMov','modalObj','modalConfig'].forEach(id=>{
   document.getElementById(id).addEventListener('click',function(e){ if(e.target===this)cerrarModal(id); });
 });
+
+// ── DEUDAS ──────────────────────────────────────────────────────────
+const K_DEUDAS = 'deudas_v1';
+function getDeudas(){ const r=localStorage.getItem(K_DEUDAS); return r?JSON.parse(r):[
+  {nombre:'Davibank', total:1000000, pagado:0},
+  {nombre:'Nu', total:500000, pagado:0},
+]; }
+function setDeudas(d){ localStorage.setItem(K_DEUDAS,JSON.stringify(d)); syncSet(K_DEUDAS,JSON.stringify(d)); }
+
+function renderDeudas(){
+  const deudas=getDeudas();
+  const totalDeuda=deudas.reduce((s,d)=>s+d.total,0);
+  const totalPagado=deudas.reduce((s,d)=>s+d.pagado,0);
+  const totalFalta=totalDeuda-totalPagado;
+
+  let html=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div>
+        <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:1px">Total deuda</div>
+        <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:var(--accent2)">$${totalFalta.toLocaleString('es-CO')}</div>
+        <div style="font-size:11px;color:var(--text2)">por pagar de $${totalDeuda.toLocaleString('es-CO')} total</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:1px">Pagado</div>
+        <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--green)">$${totalPagado.toLocaleString('es-CO')}</div>
+      </div>
+    </div>
+    <div style="background:var(--surface2);border-radius:6px;height:8px;overflow:hidden">
+      <div style="background:var(--green);height:100%;width:${totalDeuda>0?Math.round(totalPagado/totalDeuda*100):0}%;border-radius:6px;transition:width 0.4s"></div>
+    </div>
+    <div style="font-size:10px;color:var(--text2);margin-top:4px">${totalDeuda>0?Math.round(totalPagado/totalDeuda*100):0}% pagado en total</div>
+  </div>`;
+
+  deudas.forEach((d,i)=>{
+    const falta=Math.max(0,d.total-d.pagado);
+    const pct=d.total>0?Math.min(100,Math.round(d.pagado/d.total*100)):0;
+    const col=pct>=100?'var(--green)':pct>=50?'var(--yellow)':'var(--accent2)';
+    html+=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <span style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700">${d.nombre}</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:${col}">${pct}%</span>
+          <button onclick="eliminarDeuda(${i})" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:13px">✕</button>
+        </div>
+      </div>
+      <div style="background:var(--surface2);border-radius:6px;height:8px;overflow:hidden;margin-bottom:8px">
+        <div style="background:${col};height:100%;width:${pct}%;border-radius:6px;transition:width 0.4s"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:12px">
+        <span>Pagado: <span style="color:var(--green);font-weight:600">$${d.pagado.toLocaleString('es-CO')}</span></span>
+        <span>Falta: <span style="color:${col};font-weight:600">$${falta.toLocaleString('es-CO')}</span></span>
+        <span>Total: <span style="color:var(--text)">$${d.total.toLocaleString('es-CO')}</span></span>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <div style="flex:1">
+          <div style="font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Deuda total</div>
+          <input type="number" value="${d.total}" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'DM Mono',monospace;font-size:12px;padding:6px 8px;border-radius:7px;outline:none" onchange="actualizarDeuda(${i},'total',this.value)"/>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Pagado 💰</div>
+          <input type="number" value="${d.pagado}" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--green);font-family:'DM Mono',monospace;font-size:12px;padding:6px 8px;border-radius:7px;outline:none" onchange="actualizarDeuda(${i},'pagado',this.value)"/>
+        </div>
+      </div>
+      <div style="background:var(--surface2);border:1px dashed var(--border);border-radius:9px;padding:10px 12px">
+        <div style="font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">➕ Registrar abono</div>
+        <div style="display:flex;gap:8px">
+          <input type="number" id="abono_deuda_${i}" placeholder="0"
+            style="flex:1;background:var(--bg);border:1px solid var(--border);color:var(--accent2);font-family:'DM Mono',monospace;font-size:13px;padding:8px 10px;border-radius:7px;outline:none"
+            onkeydown="if(event.key==='Enter')abonarDeuda(${i})"/>
+          <button onclick="abonarDeuda(${i})" style="background:var(--accent2);border:none;color:white;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;padding:8px 14px;border-radius:7px;cursor:pointer;white-space:nowrap">+ Abonar</button>
+        </div>
+      </div>
+    </div>`;
+  });
+
+  html+=`<button onclick="agregarDeuda()" style="width:100%;padding:13px;border-radius:11px;border:1px dashed var(--border);background:transparent;color:var(--text2);font-family:'DM Mono',monospace;font-size:13px;cursor:pointer;margin-bottom:16px">+ Nueva deuda</button>`;
+  document.getElementById('listaDeudas').innerHTML=html;
+}
+
+function abonarDeuda(i){
+  const inp=document.getElementById('abono_deuda_'+i);
+  const v=parseFloat(inp.value);
+  if(!v||v<=0){inp.focus();return;}
+  const deudas=getDeudas();
+  deudas[i].pagado=(deudas[i].pagado||0)+v;
+  setDeudas(deudas); inp.value='';
+  renderDeudas();
+}
+function actualizarDeuda(i,campo,v){
+  const deudas=getDeudas(); deudas[i][campo]=parseFloat(v)||0;
+  setDeudas(deudas); renderDeudas();
+}
+function eliminarDeuda(i){
+  if(!confirm('¿Eliminar esta deuda?'))return;
+  const deudas=getDeudas(); deudas.splice(i,1);
+  setDeudas(deudas); renderDeudas();
+}
+function agregarDeuda(){
+  const nombre=prompt('Nombre de la deuda (ej: Davibank, Nu, Amigo):');
+  if(!nombre)return;
+  const total=parseFloat(prompt('Monto total de la deuda:')||'0');
+  if(!total)return;
+  const pagado=parseFloat(prompt('¿Cuánto has pagado hasta ahora? (0 si es nueva):')||'0');
+  const deudas=getDeudas();
+  deudas.push({nombre,total,pagado});
+  setDeudas(deudas); renderDeudas();
+}
 
 // ── INIT ──────────────────────────────────────────────────────────
 function init(){
