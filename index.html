@@ -144,6 +144,7 @@ body { font-family: 'DM Mono', monospace; background: var(--bg); color: var(--te
   <div class="sync-left"><div class="sync-dot" id="syncDot"></div><span id="syncText">Sin configurar Google Sheets</span></div>
   <div style="display:flex;gap:6px">
     <button class="btn-config" onclick="syncPull()" id="btnSync" style="display:none">↻ Sync</button>
+    <button class="btn-config" onclick="abrirCats()">📋 Cats</button>
     <button class="btn-config" onclick="abrirConfig()">⚙ Config</button>
   </div>
 </div>
@@ -254,6 +255,29 @@ body { font-family: 'DM Mono', monospace; background: var(--bg); color: var(--te
   </div>
 </div>
 
+<!-- MODAL CATEGORÍAS -->
+<div class="modal-overlay" id="modalCats">
+  <div class="modal">
+    <div class="modal-title">📋 Gestionar Categorías</div>
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <button onclick="setCatTab('gasto')" id="catTabGasto"
+        style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:white;font-family:'DM Mono',monospace;font-size:12px;cursor:pointer">
+        Gastos
+      </button>
+      <button onclick="setCatTab('ingreso')" id="catTabIngreso"
+        style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:'DM Mono',monospace;font-size:12px;cursor:pointer">
+        Ingresos
+      </button>
+    </div>
+    <div id="listaCatsModal"></div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <input class="form-input" id="nuevaCat" placeholder="Nueva categoría..." style="flex:1"/>
+      <button onclick="agregarCat()" style="background:var(--accent);border:none;color:white;font-family:'Syne',sans-serif;font-weight:700;padding:10px 16px;border-radius:10px;cursor:pointer">+ Agregar</button>
+    </div>
+    <button class="btn-cancel" onclick="cerrarModal('modalCats')" style="margin-top:12px">Cerrar</button>
+  </div>
+</div>
+
 <!-- MODAL CONFIG -->
 <div class="modal-overlay" id="modalConfig">
   <div class="modal">
@@ -272,6 +296,28 @@ body { font-family: 'DM Mono', monospace; background: var(--bg); color: var(--te
 </div>
 
 <script>
+// ── FORMATO NÚMEROS ──────────────────────────────────────────────
+function formatNum(n){ const v=parseFloat(n)||0; return v.toLocaleString('es-CO'); }
+function parseNum(s){ 
+  if(!s && s!==0) return 0;
+  const str = String(s).trim();
+  // Quitar todos los puntos de miles y convertir coma decimal si existe
+  const clean = str.replace(/\./g,'').replace(',','.');
+  const v = parseFloat(clean);
+  return isNaN(v) ? 0 : v;
+}
+function onInputFormat(el){
+  // No reformatear mientras escribe, solo al salir del campo
+}
+function onBlurFormat(el){
+  const v = parseNum(el.value);
+  el.value = v.toLocaleString('es-CO');
+}
+function onFocusUnformat(el){
+  const v = parseNum(el.value);
+  el.value = v >= 0 ? v : '';
+}
+
 // ── DATOS ──────────────────────────────────────────────────────────
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const CATS_GASTO = ['Transporte','Alimentación','Restaurantes','Comida a domicilio','Bares','Ropa','Belleza','Retiro','Hogar','Tarjeta de crédito','Juegos','Pequeñas compras','Tasas/Impuestos','Viajes/vacaciones','Tecnología','Reparaciones','Salud','Higiene','Cursos/Formación/Trabajo','Mascotas','Familia','Otros','Comida fuera','Tienda','GYM','Deudas','Uni'];
@@ -296,9 +342,11 @@ let pendingAhorroId = null;
 let mostrarOcultos = false;
 
 // ── STORAGE + SYNC ───────────────────────────────────────────────────
-const K_ACTIVOS = 'meses_activos_v4';
-const K_OCULTOS = 'meses_ocultos_v4';
-const K_OBJS    = 'ahorros_objs_v1';
+const K_ACTIVOS  = 'meses_activos_v4';
+const K_OCULTOS  = 'meses_ocultos_v4';
+const K_OBJS     = 'ahorros_objs_v1';
+const K_CATS_GAS = 'cats_gasto_v1';
+const K_CATS_ING = 'cats_ingreso_v1';
 
 function getScriptUrl(){ return localStorage.getItem('gs_url')||''; }
 
@@ -330,6 +378,18 @@ function setOcultos(d){
 function gd(m,a){ const r=localStorage.getItem(`fin_${a}_${m}`); return r?JSON.parse(r):{movimientos:[],remanente_dinamico:false,remanente:0}; }
 function gf(m,a){ const r=localStorage.getItem(`fijos_${a}_${m}`); return r?JSON.parse(r):FIJOS_DEFAULT.map(f=>({...f,real:f.monto,pagado:false})); }
 function getObjs(){ const r=localStorage.getItem(K_OBJS); return r?JSON.parse(r):[{nombre:'Moto',meta:2000000,acumulado:0},{nombre:'Gym',meta:500000,acumulado:0},{nombre:'Aniversario',meta:300000,acumulado:0},{nombre:'Navidad',meta:500000,acumulado:0}]; }
+function getCatsGasto(){
+  const r=localStorage.getItem(K_CATS_GAS);
+  return r?JSON.parse(r):[...CATS_GASTO];
+}
+function setCatsGasto(d){ localStorage.setItem(K_CATS_GAS,JSON.stringify(d)); syncSet(K_CATS_GAS,JSON.stringify(d)); }
+
+function getCatsIngreso(){
+  const r=localStorage.getItem(K_CATS_ING);
+  return r?JSON.parse(r):[...CATS_INGRESO];
+}
+function setCatsIngreso(d){ localStorage.setItem(K_CATS_ING,JSON.stringify(d)); syncSet(K_CATS_ING,JSON.stringify(d)); }
+
 function getActivos(){ const r=localStorage.getItem(K_ACTIVOS); if(r)return JSON.parse(r); const hoy=new Date(); return [{mes:hoy.getMonth(),anio:hoy.getFullYear()}]; }
 function getOcultos(){ const r=localStorage.getItem(K_OCULTOS); if(r)return JSON.parse(r); const hoy=new Date(); const out=[]; for(let i=0;i<hoy.getMonth();i++) out.push({mes:i,anio:hoy.getFullYear()}); return out; }
 
@@ -499,8 +559,8 @@ function renderFijos(){
           <div><div class="fijo-lbl">Aprox.</div><div class="fijo-num">$${f.monto.toLocaleString('es-CO')}</div></div>
           <div style="color:var(--border);font-size:16px">→</div>
           <div><div class="fijo-lbl">Real</div>
-            <input class="fijo-input" type="number" value="${f.real!==undefined?f.real:f.monto}" 
-              ${f.pagado?'disabled':''} onchange="actualizarRealFijo(${i},this.value)"/>
+            <input class="fijo-input" type="text" inputmode="numeric" value="${formatNum(f.real!==undefined?f.real:f.monto)}" 
+              ${f.pagado?'disabled':''} onfocus="onFocusUnformat(this)" onblur="onBlurFormat(this)" onchange="actualizarRealFijo(${i},parseNum(this.value))"/>
           </div>
         </div>
       </div>
@@ -575,8 +635,8 @@ function renderObjetivos(){
       <div class="obj-bar-wrap"><div class="obj-bar" style="background:${col};width:${pct}%"></div></div>
       <div class="obj-info">$${o.acumulado.toLocaleString('es-CO')} de $${o.meta.toLocaleString('es-CO')} · ${faltan>0?'Faltan $'+faltan.toLocaleString('es-CO'):'✓ Meta cumplida'}</div>
       <div class="obj-campos">
-        <div class="obj-campo"><label>Meta 🏁</label><input type="number" value="${o.meta}" onchange="actualizarObj(${i},'meta',this.value)"/></div>
-        <div class="obj-campo"><label>Acumulado 💰</label><input type="number" value="${o.acumulado}" style="color:var(--yellow)" onchange="actualizarObj(${i},'acumulado',this.value)"/></div>
+        <div class="obj-campo"><label>Meta 🏁</label><input type="text" inputmode="numeric" value="${formatNum(o.meta)}" onfocus="onFocusUnformat(this)" onblur="onBlurFormat(this)" onchange="actualizarObj(${i},'meta',parseNum(this.value))"/></div>
+        <div class="obj-campo"><label>Acumulado 💰</label><input type="text" inputmode="numeric" value="${formatNum(o.acumulado)}" style="color:var(--yellow)" onfocus="onFocusUnformat(this)" onblur="onBlurFormat(this)" onchange="actualizarObj(${i},'acumulado',parseNum(this.value))"/></div>
       </div>
       <div class="obj-abono">
         <label>➕ Agregar abono</label>
@@ -808,10 +868,10 @@ function setTipo(tipo,catSel=null){
     b.className='tipo-btn'+(t===tipo?' t'+t[0]:'');
   });
   let cats;
-  if(tipo==='ingreso') cats=CATS_INGRESO;
+  if(tipo==='ingreso') cats=getCatsIngreso();
   else if(tipo==='ahorro') cats=[...getObjs().map(o=>o.nombre),...CATS_AHORRO_BASE];
   else if(tipo==='deuda') cats=getDeudas().map(d=>d.nombre);
-  else cats=CATS_GASTO;
+  else cats=getCatsGasto();
   const sel=document.getElementById('inCategoria');
   sel.innerHTML=cats.map(c=>`<option ${c===catSel?'selected':''}>${c}</option>`).join('');
 }
@@ -971,7 +1031,7 @@ function guardarConfig(){
 }
 
 // Cerrar modales tocando overlay
-['modalMov','modalObj','modalConfig'].forEach(id=>{
+['modalMov','modalObj','modalConfig','modalCats'].forEach(id=>{
   document.getElementById(id).addEventListener('click',function(e){ if(e.target===this)cerrarModal(id); });
 });
 
@@ -1030,11 +1090,11 @@ function renderDeudas(){
       <div style="display:flex;gap:8px;margin-bottom:10px">
         <div style="flex:1">
           <div style="font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Deuda total</div>
-          <input type="number" value="${d.total}" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'DM Mono',monospace;font-size:12px;padding:6px 8px;border-radius:7px;outline:none" onchange="actualizarDeuda(${i},'total',this.value)"/>
+          <input type="text" inputmode="numeric" value="${formatNum(d.total)}" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'DM Mono',monospace;font-size:12px;padding:6px 8px;border-radius:7px;outline:none" onfocus="onFocusUnformat(this)" onblur="onBlurFormat(this)" onchange="actualizarDeuda(${i},'total',parseNum(this.value))"/>
         </div>
         <div style="flex:1">
           <div style="font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Pagado 💰</div>
-          <input type="number" value="${d.pagado}" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--green);font-family:'DM Mono',monospace;font-size:12px;padding:6px 8px;border-radius:7px;outline:none" onchange="actualizarDeuda(${i},'pagado',this.value)"/>
+          <input type="text" inputmode="numeric" value="${formatNum(d.pagado)}" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--green);font-family:'DM Mono',monospace;font-size:12px;padding:6px 8px;border-radius:7px;outline:none" onfocus="onFocusUnformat(this)" onblur="onBlurFormat(this)" onchange="actualizarDeuda(${i},'pagado',parseNum(this.value))"/>
         </div>
       </div>
       <div style="background:var(--surface2);border:1px dashed var(--border);border-radius:9px;padding:10px 12px">
@@ -1080,6 +1140,58 @@ function agregarDeuda(){
   const deudas=getDeudas();
   deudas.push({nombre,total,pagado});
   setDeudas(deudas); renderDeudas();
+}
+
+// ── GESTIÓN CATEGORÍAS ───────────────────────────────────────────
+let catTabActual = 'gasto';
+
+function abrirCats(){
+  catTabActual = 'gasto';
+  renderCatsModal();
+  document.getElementById('modalCats').classList.add('open');
+}
+
+function setCatTab(tipo){
+  catTabActual = tipo;
+  document.getElementById('catTabGasto').style.background = tipo==='gasto'?'var(--accent)':'var(--surface2)';
+  document.getElementById('catTabGasto').style.borderColor = tipo==='gasto'?'var(--accent)':'var(--border)';
+  document.getElementById('catTabGasto').style.color = tipo==='gasto'?'white':'var(--text2)';
+  document.getElementById('catTabIngreso').style.background = tipo==='ingreso'?'var(--accent)':'var(--surface2)';
+  document.getElementById('catTabIngreso').style.borderColor = tipo==='ingreso'?'var(--accent)':'var(--border)';
+  document.getElementById('catTabIngreso').style.color = tipo==='ingreso'?'white':'var(--text2)';
+  renderCatsModal();
+}
+
+function renderCatsModal(){
+  const cats = catTabActual==='gasto' ? getCatsGasto() : getCatsIngreso();
+  document.getElementById('listaCatsModal').innerHTML = cats.map((c,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
+      <span style="flex:1;font-size:13px">${c}</span>
+      <button onclick="eliminarCat(${i})" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:13px">🗑</button>
+    </div>`).join('');
+}
+
+function agregarCat(){
+  const inp = document.getElementById('nuevaCat');
+  const nombre = inp.value.trim();
+  if(!nombre) return;
+  if(catTabActual==='gasto'){
+    const cats=getCatsGasto(); cats.push(nombre); setCatsGasto(cats);
+  } else {
+    const cats=getCatsIngreso(); cats.push(nombre); setCatsIngreso(cats);
+  }
+  inp.value='';
+  renderCatsModal();
+}
+
+function eliminarCat(i){
+  if(!confirm('¿Eliminar esta categoría?'))return;
+  if(catTabActual==='gasto'){
+    const cats=getCatsGasto(); cats.splice(i,1); setCatsGasto(cats);
+  } else {
+    const cats=getCatsIngreso(); cats.splice(i,1); setCatsIngreso(cats);
+  }
+  renderCatsModal();
 }
 
 // ── INIT ──────────────────────────────────────────────────────────
