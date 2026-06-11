@@ -958,17 +958,18 @@ function guardarMov(){
   // Si es tipo deuda, asignar automáticamente a la deuda por nombre de categoría
   if(tipoActual==='deuda'){
     const deudas=getDeudas();
-    const idx=deudas.findIndex(d=>d.nombre===categoria);
-    if(idx>=0){
-      deudas[idx].pagado=(deudas[idx].pagado||0)+monto;
+    const dIdx=deudas.findIndex(d=>d.nombre===categoria);
+    if(dIdx>=0){
+      deudas[dIdx].pagado=(deudas[dIdx].pagado||0)+monto;
       setDeudas(deudas);
-      // Buscar el movimiento en el mes correcto según la fecha
-      const fechaMov = new Date(fecha);
-      const mesMov = fechaMov.getMonth();
-      const anioMov = fechaMov.getFullYear();
-      const data2=gd(mesMov, anioMov);
+      // Usar mesMov2 y anioMov2 calculados arriba para buscar el movimiento
+      const data2=gd(mesMov2, anioMov2);
       const mi=data2.movimientos.findIndex(m=>m.id===mov.id);
-      if(mi>=0){ data2.movimientos[mi].deudaIdx=idx; data2.movimientos[mi].deudaNombre=deudas[idx].nombre; sd(data2,mesMov,anioMov); }
+      if(mi>=0){
+        data2.movimientos[mi].deudaIdx=dIdx;
+        data2.movimientos[mi].deudaNombre=deudas[dIdx].nombre;
+        sd(data2,mesMov2,anioMov2);
+      }
     }
     render(); return;
   }
