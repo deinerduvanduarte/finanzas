@@ -420,6 +420,10 @@ async function processSyncQueue(){
 }
 
 async function syncPull(){
+  await syncConInteligente();
+}
+
+async function syncConInteligente(){
   const url = getScriptUrl();
   if(!url) return;
   setSyncStatus('pulling');
@@ -428,46 +432,64 @@ async function syncPull(){
     const res = await fetch(url + '?payload=' + payload);
     const text = await res.text();
     const json = JSON.parse(text);
-    if(json.ok && json.values){
-      let changed = false;
-      Object.entries(json.values).forEach(([k,v])=>{
-        if(!v) return; // ignorar valores vacíos del Sheets
-        const local = localStorage.getItem(k);
-        if(!local) {
-          // Solo aplicar si no hay datos locales
-          localStorage.setItem(k, v);
+    if(!json.ok || !json.values){ setSyncStatus('ok'); return; }
+    
+    let changed = false;
+    const remotos = json.values;
+    
+    // Para cada clave remota, comparar timestamps
+    for(const [k, vRemoto] of Object.entries(remotos)){
+      if(!vRemoto || vRemoto === 'undefined') continue;
+      const vLocal = localStorage.getItem(k);
+      
+      if(!vLocal){
+        // No hay local, usar remoto
+        localStorage.setItem(k, vRemoto);
+        changed = true;
+        continue;
+      }
+      
+      try {
+        const remoto = JSON.parse(vRemoto);
+        const local = JSON.parse(vLocal);
+        const tsRemoto = remoto._ts || 0;
+        const tsLocal = local._ts || 0;
+        
+        if(tsRemoto > tsLocal){
+          // Remoto es más nuevo, actualizar local
+          localStorage.setItem(k, vRemoto);
           changed = true;
-          return;
+        } else if(tsLocal > tsRemoto){
+          // Local es más nuevo, subir al Sheets
+          syncSet(k, vLocal);
         }
-        // Comparar cantidad de movimientos: solo aplicar si Sheets tiene MÁS datos
-        try {
-          const remoto = JSON.parse(v);
-          const localObj = JSON.parse(local);
-          // Para movimientos, solo actualizar si el remoto tiene más o igual movimientos
-          if(remoto.movimientos && localObj.movimientos){
-            if(remoto.movimientos.length > localObj.movimientos.length){
-              localStorage.setItem(k, v);
-              changed = true;
-            }
-          } else if(JSON.stringify(remoto) !== JSON.stringify(localObj)){
-            // Para otros datos (objetivos, fijos, etc), comparar directo
-            localStorage.setItem(k, v);
-            changed = true;
-          }
-        } catch(e){
-          // Si no es JSON, comparar como string
-          if(v !== local){
-            localStorage.setItem(k, v);
-            changed = true;
-          }
+        // Si son iguales, no hacer nada
+      } catch(e){
+        // No es JSON, usar el que tenga contenido
+        if(vRemoto && vRemoto !== vLocal){
+          localStorage.setItem(k, vRemoto);
+          changed = true;
         }
-      });
-      if(changed){ render(); renderStrip(); }
+      }
     }
+    
+    // También subir claves locales que no están en remoto
+    for(let i=0; i<localStorage.length; i++){
+      const k = localStorage.key(i);
+      if(!k) continue;
+      if(k.startsWith('fin_') || k.startsWith('fijos_') || 
+         k === K_OBJS || k === K_DEUDAS || k === K_ACTIVOS || 
+         k === K_OCULTOS || k === K_CATS_GAS || k === K_CATS_ING){
+        if(!remotos[k]){
+          syncSet(k, localStorage.getItem(k));
+        }
+      }
+    }
+    
+    if(changed){ render(); renderStrip(); }
     setSyncStatus('ok');
   } catch(e) {
     setSyncStatus('error');
-    console.log('Sync error:', e);
   }
 }
 
@@ -1168,8 +1190,8 @@ function checkSync(){
   const url=localStorage.getItem('gs_url')||'';
   if(url){
     setSyncStatus('ok');
-    syncPull(); // al abrir, traer datos del Sheets
-    setInterval(syncPull, 60000); // sincronizar cada 60 segundos
+    syncConInteligente(); // sync al abrir
+    setInterval(syncConInteligente, 30000); // sync cada 30 segundos
   } else {
     document.getElementById('syncDot').className='sync-dot';
     document.getElementById('syncText').textContent='Sin configurar Google Sheets';
