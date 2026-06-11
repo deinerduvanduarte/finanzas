@@ -1062,6 +1062,84 @@ function seleccionarObj(idx){
 }
 
 // ── CONFIG ──────────────────────────────────────────────────────────
+function recuperarMeses(){
+  // Buscar todos los meses que tienen datos en localStorage
+  const anioActualHoy = new Date().getFullYear();
+  const encontrados = [];
+  for(let anio = anioActualHoy - 1; anio <= anioActualHoy + 1; anio++){
+    for(let mes = 0; mes < 12; mes++){
+      const data = gd(mes, anio);
+      if(data.movimientos && data.movimientos.length > 0){
+        encontrados.push({mes, anio});
+      }
+    }
+  }
+  if(encontrados.length === 0){
+    alert('No se encontraron meses con datos.');
+    return;
+  }
+  // Agregar a activos u ocultos según corresponda
+  const hoy = new Date();
+  const mesHoy = hoy.getMonth();
+  const anioHoy = hoy.getFullYear();
+  let activos = getActivos();
+  let ocultos = getOcultos();
+  let recuperados = 0;
+  encontrados.forEach(({mes, anio}) => {
+    const enActivos = activos.find(a => a.mes === mes && a.anio === anio);
+    const enOcultos = ocultos.find(o => o.mes === mes && o.anio === anio);
+    if(!enActivos && !enOcultos){
+      // Mes con datos que no está en ningún lado - agregarlo
+      if(mes < mesHoy && anio === anioHoy){
+        ocultos.push({mes, anio});
+      } else {
+        activos.push({mes, anio});
+        activos.sort((a,b) => a.anio !== b.anio ? a.anio - b.anio : a.mes - b.mes);
+      }
+      recuperados++;
+    }
+  });
+  setActivos(activos);
+  setOcultos(ocultos);
+  cerrarModal('modalConfig');
+  renderStrip();
+  alert('✅ ' + recuperados + ' mes(es) recuperados. Total con datos: ' + encontrados.length);
+}
+
+async function syncSubirTodo(){
+  const url = getScriptUrl();
+  if(!url){ alert('Configurá Google Sheets primero.'); return; }
+  if(!confirm('Esto sube TODOS tus datos locales al Sheets. ¿Continuar?')) return;
+  setSyncStatus('pulling');
+  try {
+    // Recopilar todas las claves relevantes del localStorage
+    const claves = [];
+    for(let i=0; i<localStorage.length; i++){
+      const k = localStorage.key(i);
+      if(k && (k.startsWith('fin_') || k.startsWith('fijos_') || 
+               k === K_OBJS || k === K_DEUDAS || k === K_ACTIVOS || 
+               k === K_OCULTOS || k === K_CATS_GAS || k === K_CATS_ING)){
+        claves.push(k);
+      }
+    }
+    let subidos = 0;
+    for(const k of claves){
+      const v = localStorage.getItem(k);
+      if(v){
+        const payload = encodeURIComponent(JSON.stringify({accion:'set', clave:k, data:v}));
+        await fetch(url + '?payload=' + payload, {redirect:'follow'});
+        subidos++;
+      }
+    }
+    setSyncStatus('ok');
+    cerrarModal('modalConfig');
+    alert('✅ ' + subidos + ' registros subidos al Sheets correctamente.');
+  } catch(e){
+    setSyncStatus('error');
+    alert('Error: ' + e.message);
+  }
+}
+
 async function syncForzado(){
   const url = getScriptUrl();
   if(!url){ alert('Configurá Google Sheets primero.'); return; }
