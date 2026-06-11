@@ -281,17 +281,16 @@ body { font-family: 'DM Mono', monospace; background: var(--bg); color: var(--te
 <!-- MODAL CONFIG -->
 <div class="modal-overlay" id="modalConfig">
   <div class="modal">
-    <div class="modal-title">⚙ Configurar Google Sheets</div>
-    <div class="config-info">
-      1. Creá un Google Sheet nuevo<br>
-      2. Activá Google Sheets API en <a href="https://console.cloud.google.com" target="_blank">console.cloud.google.com</a><br>
-      3. Creá un Apps Script Web App y pegá la URL abajo<br>
-      4. Copiá el ID del Sheet desde la URL
-    </div>
+    <div class="modal-title">⚙ Google Sheets</div>
     <div class="form-group"><label class="form-label">ID del Google Sheet</label><input class="form-input" id="cfgSheetId" placeholder="1BxiMVs0XRA..."/></div>
     <div class="form-group"><label class="form-label">Apps Script Web App URL</label><input class="form-input" id="cfgScriptUrl" placeholder="https://script.google.com/macros/s/..."/></div>
-    <button class="btn-save" onclick="guardarConfig()">Guardar</button>
-    <button class="btn-cancel" onclick="cerrarModal('modalConfig')">Cancelar</button>
+    <button class="btn-save" onclick="guardarConfig()">Guardar configuración</button>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+      <button onclick="syncSubirTodo()" style="padding:10px;border-radius:10px;border:1px solid var(--green);background:transparent;color:var(--green);font-family:'DM Mono',monospace;font-size:11px;cursor:pointer">⬆ Subir al Sheets</button>
+      <button onclick="syncForzado()" style="padding:10px;border-radius:10px;border:1px solid var(--accent2);background:transparent;color:var(--accent2);font-family:'DM Mono',monospace;font-size:11px;cursor:pointer">⬇ Traer del Sheets</button>
+    </div>
+    <button onclick="recuperarMeses()" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--yellow);background:transparent;color:var(--yellow);font-family:'DM Mono',monospace;font-size:11px;cursor:pointer;margin-top:8px">🔍 Recuperar meses con datos</button>
+    <button class="btn-cancel" onclick="cerrarModal('modalConfig')" style="margin-top:8px">Cerrar</button>
   </div>
 </div>
 
