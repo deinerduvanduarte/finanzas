@@ -937,7 +937,22 @@ function guardarMov(){
   } else {
     data.movimientos.push(mov);
   }
-  sd(data,mesActual,anioActual);
+  // Guardar en el mes correcto según la fecha del movimiento
+  const fechaMov2 = new Date(fecha + 'T12:00:00');
+  const mesMov2 = fechaMov2.getMonth();
+  const anioMov2 = fechaMov2.getFullYear();
+  if(mesMov2 !== mesActual || anioMov2 !== anioActual){
+    // Mover al mes correcto según la fecha
+    data.movimientos = data.movimientos.filter(m=>m.id!==mov.id);
+    sd(data, mesActual, anioActual);
+    const dataDestino = gd(mesMov2, anioMov2);
+    const miDest = dataDestino.movimientos.findIndex(m=>m.id===mov.id);
+    if(miDest>=0) dataDestino.movimientos[miDest]=mov;
+    else dataDestino.movimientos.push(mov);
+    sd(dataDestino, mesMov2, anioMov2);
+  } else {
+    sd(data, mesActual, anioActual);
+  }
   cerrarModal('modalMov');
 
   // Si es tipo deuda, asignar automáticamente a la deuda por nombre de categoría
@@ -947,9 +962,13 @@ function guardarMov(){
     if(idx>=0){
       deudas[idx].pagado=(deudas[idx].pagado||0)+monto;
       setDeudas(deudas);
-      const data2=gd(mesActual,anioActual);
+      // Buscar el movimiento en el mes correcto según la fecha
+      const fechaMov = new Date(fecha);
+      const mesMov = fechaMov.getMonth();
+      const anioMov = fechaMov.getFullYear();
+      const data2=gd(mesMov, anioMov);
       const mi=data2.movimientos.findIndex(m=>m.id===mov.id);
-      if(mi>=0){ data2.movimientos[mi].deudaIdx=idx; data2.movimientos[mi].deudaNombre=deudas[idx].nombre; sd(data2,mesActual,anioActual); }
+      if(mi>=0){ data2.movimientos[mi].deudaIdx=idx; data2.movimientos[mi].deudaNombre=deudas[idx].nombre; sd(data2,mesMov,anioMov); }
     }
     render(); return;
   }
