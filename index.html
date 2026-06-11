@@ -432,10 +432,35 @@ async function syncPull(){
     if(json.ok && json.values){
       let changed = false;
       Object.entries(json.values).forEach(([k,v])=>{
+        if(!v) return; // ignorar valores vacíos del Sheets
         const local = localStorage.getItem(k);
-        if(v && local !== v){
+        if(!local) {
+          // Solo aplicar si no hay datos locales
           localStorage.setItem(k, v);
           changed = true;
+          return;
+        }
+        // Comparar cantidad de movimientos: solo aplicar si Sheets tiene MÁS datos
+        try {
+          const remoto = JSON.parse(v);
+          const localObj = JSON.parse(local);
+          // Para movimientos, solo actualizar si el remoto tiene más o igual movimientos
+          if(remoto.movimientos && localObj.movimientos){
+            if(remoto.movimientos.length > localObj.movimientos.length){
+              localStorage.setItem(k, v);
+              changed = true;
+            }
+          } else if(JSON.stringify(remoto) !== JSON.stringify(localObj)){
+            // Para otros datos (objetivos, fijos, etc), comparar directo
+            localStorage.setItem(k, v);
+            changed = true;
+          }
+        } catch(e){
+          // Si no es JSON, comparar como string
+          if(v !== local){
+            localStorage.setItem(k, v);
+            changed = true;
+          }
         }
       });
       if(changed){ render(); renderStrip(); }
@@ -1009,7 +1034,7 @@ function checkSync(){
   if(url){
     setSyncStatus('ok');
     syncPull(); // al abrir, traer datos del Sheets
-    setInterval(syncPull, 30000); // sincronizar cada 30 segundos
+    setInterval(syncPull, 60000); // sincronizar cada 60 segundos
   } else {
     document.getElementById('syncDot').className='sync-dot';
     document.getElementById('syncText').textContent='Sin configurar Google Sheets';
