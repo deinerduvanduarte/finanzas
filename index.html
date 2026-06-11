@@ -906,9 +906,16 @@ function eliminarMov(idx){
   if(!confirm('¿Eliminar este movimiento?'))return;
   const data=gd(mesActual,anioActual);
   const m=data.movimientos[idx];
+  // Revertir ahorro de objetivo
   if(m.tipo==='ahorro'&&m.objIdx!==undefined){
     const objs=getObjs();
     if(objs[m.objIdx]){ objs[m.objIdx].acumulado=Math.max(0,objs[m.objIdx].acumulado-m.monto); setObjs(objs); }
+  }
+  // Revertir pago de deuda por nombre
+  if(m.tipo==='deuda'&&m.deudaNombre){
+    const deudas=getDeudas();
+    const dIdx=deudas.findIndex(d=>d.nombre===m.deudaNombre);
+    if(dIdx>=0){ deudas[dIdx].pagado=Math.max(0,deudas[dIdx].pagado-m.monto); setDeudas(deudas); }
   }
   data.movimientos.splice(idx,1);
   sd(data,mesActual,anioActual); render();
@@ -958,18 +965,24 @@ function guardarMov(){
   // Si es tipo deuda, asignar automáticamente a la deuda por nombre de categoría
   if(tipoActual==='deuda'){
     const deudas=getDeudas();
+    // Buscar por nombre (más confiable que por índice)
     const dIdx=deudas.findIndex(d=>d.nombre===categoria);
     if(dIdx>=0){
       deudas[dIdx].pagado=(deudas[dIdx].pagado||0)+monto;
       setDeudas(deudas);
-      // Usar mesMov2 y anioMov2 calculados arriba para buscar el movimiento
-      const data2=gd(mesMov2, anioMov2);
-      const mi=data2.movimientos.findIndex(m=>m.id===mov.id);
-      if(mi>=0){
-        data2.movimientos[mi].deudaIdx=dIdx;
-        data2.movimientos[mi].deudaNombre=deudas[dIdx].nombre;
-        sd(data2,mesMov2,anioMov2);
-      }
+    } else {
+      // Si no existe la deuda con ese nombre, crearla automáticamente
+      deudas.push({nombre:categoria, total:monto, pagado:monto});
+      setDeudas(deudas);
+    }
+    // Actualizar el movimiento con nombre de deuda
+    const dIdxFinal = getDeudas().findIndex(d=>d.nombre===categoria);
+    const data2=gd(mesMov2, anioMov2);
+    const mi=data2.movimientos.findIndex(m=>m.id===mov.id);
+    if(mi>=0){
+      data2.movimientos[mi].deudaIdx=dIdxFinal;
+      data2.movimientos[mi].deudaNombre=categoria;
+      sd(data2,mesMov2,anioMov2);
     }
     render(); return;
   }
@@ -1160,12 +1173,12 @@ function renderDeudas(){
 
 function abonarDeuda(i){
   const inp=document.getElementById('abono_deuda_'+i);
-  const v=parseFloat(inp.value);
+  const v=parseNum(inp.value);
   if(!v||v<=0){inp.focus();return;}
   const deudas=getDeudas();
   deudas[i].pagado=(deudas[i].pagado||0)+v;
   setDeudas(deudas); inp.value='';
-  renderDeudas();
+  renderDeudas(); render();
 }
 function actualizarDeuda(i,campo,v){
   const deudas=getDeudas(); deudas[i][campo]=parseFloat(v)||0;
@@ -1177,13 +1190,21 @@ function eliminarDeuda(i){
   setDeudas(deudas); renderDeudas();
 }
 function agregarDeuda(){
-  const nombre=prompt('Nombre de la deuda (ej: Davibank, Nu, Amigo):');
-  if(!nombre)return;
-  const total=parseFloat(prompt('Monto total de la deuda:')||'0');
+  const nombre=prompt('Nombre de la deuda (ej: Nana, Mamá, Amigo):');
+  if(!nombre||!nombre.trim())return;
+  const totalStr=prompt('Monto total de la deuda (ej: 1000000):');
+  if(!totalStr)return;
+  const total=parseNum(totalStr)||parseFloat(totalStr)||0;
   if(!total)return;
-  const pagado=parseFloat(prompt('¿Cuánto has pagado hasta ahora? (0 si es nueva):')||'0');
+  const pagadoStr=prompt('¿Cuánto has pagado hasta ahora? (0 si es nueva):') || '0';
+  const pagado=parseNum(pagadoStr)||parseFloat(pagadoStr)||0;
   const deudas=getDeudas();
-  deudas.push({nombre,total,pagado});
+  // Verificar que no exista ya una deuda con ese nombre
+  if(deudas.find(d=>d.nombre===nombre.trim())){
+    alert('Ya existe una deuda con ese nombre.');
+    return;
+  }
+  deudas.push({nombre:nombre.trim(),total,pagado});
   setDeudas(deudas); renderDeudas();
 }
 
