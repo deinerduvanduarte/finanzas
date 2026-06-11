@@ -1062,6 +1062,31 @@ function seleccionarObj(idx){
 }
 
 // ── CONFIG ──────────────────────────────────────────────────────────
+async function syncForzado(){
+  const url = getScriptUrl();
+  if(!url){ alert('Configurá Google Sheets primero.'); return; }
+  if(!confirm('Esto sobreescribirá todos los datos locales con los del Sheets. ¿Continuar?')) return;
+  setSyncStatus('pulling');
+  try {
+    const payload = encodeURIComponent(JSON.stringify({accion:'getAll'}));
+    const res = await fetch(url + '?payload=' + payload);
+    const text = await res.text();
+    const json = JSON.parse(text);
+    if(json.ok && json.values && Object.keys(json.values).length > 0){
+      Object.entries(json.values).forEach(([k,v])=>{ if(v) localStorage.setItem(k,v); });
+      setSyncStatus('ok');
+      cerrarModal('modalConfig');
+      render(); renderStrip();
+      alert('✅ Datos sincronizados desde Google Sheets.');
+    } else {
+      alert('El Sheets está vacío o no respondió correctamente.');
+    }
+  } catch(e){
+    setSyncStatus('error');
+    alert('Error de conexión: ' + e.message);
+  }
+}
+
 function checkSync(){
   const url=localStorage.getItem('gs_url')||'';
   if(url){
