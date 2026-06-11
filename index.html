@@ -396,6 +396,21 @@ function getOcultos(){ const r=localStorage.getItem(K_OCULTOS); if(r)return JSON
 let syncQueue = [];
 let syncing = false;
 
+function jsonpRequest(url, payload, callback){
+  return new Promise((resolve) => {
+    const cbName = 'cb_' + Date.now();
+    const script = document.createElement('script');
+    window[cbName] = (data) => {
+      delete window[cbName];
+      document.body.removeChild(script);
+      resolve(data);
+    };
+    script.src = url + '?payload=' + encodeURIComponent(payload) + '&callback=' + cbName;
+    script.onerror = () => { delete window[cbName]; document.body.removeChild(script); resolve(null); };
+    document.body.appendChild(script);
+  });
+}
+
 async function syncSet(key, value){
   const url = getScriptUrl();
   if(!url) return;
@@ -409,11 +424,10 @@ async function processSyncQueue(){
   syncing = true;
   const item = syncQueue.shift();
   try {
-    const payload = encodeURIComponent(JSON.stringify({accion:'set', clave:item.key, data:item.value}));
-    const res = await fetch(url + '?payload=' + payload, {redirect:'follow'});
+    const payload = JSON.stringify({accion:'set', clave:item.key, data:item.value});
+    await jsonpRequest(url, payload);
     setSyncStatus('ok');
   } catch(e) {
-    // no-cors no retorna respuesta pero igual envía
     setSyncStatus('ok');
   }
   setTimeout(processSyncQueue, 800);
@@ -428,10 +442,9 @@ async function syncConInteligente(){
   if(!url) return;
   setSyncStatus('pulling');
   try {
-    const payload = encodeURIComponent(JSON.stringify({accion:'getAll'}));
-    const res = await fetch(url + '?payload=' + payload);
-    const text = await res.text();
-    const json = JSON.parse(text);
+    const payload = JSON.stringify({accion:'getAll'});
+    const json = await jsonpRequest(url, payload);
+    if(!json){ setSyncStatus('error'); return; }
     if(!json.ok || !json.values){ setSyncStatus('ok'); return; }
     
     let changed = false;
@@ -1147,8 +1160,8 @@ async function syncSubirTodo(){
     for(const k of claves){
       const v = localStorage.getItem(k);
       if(v){
-        const payload = encodeURIComponent(JSON.stringify({accion:'set', clave:k, data:v}));
-        await fetch(url + '?payload=' + payload, {redirect:'follow'});
+        const payload = JSON.stringify({accion:'set', clave:k, data:v});
+        await jsonpRequest(url, payload);
         subidos++;
       }
     }
@@ -1167,10 +1180,9 @@ async function syncForzado(){
   if(!confirm('Esto sobreescribirá todos los datos locales con los del Sheets. ¿Continuar?')) return;
   setSyncStatus('pulling');
   try {
-    const payload = encodeURIComponent(JSON.stringify({accion:'getAll'}));
-    const res = await fetch(url + '?payload=' + payload);
-    const text = await res.text();
-    const json = JSON.parse(text);
+    const payload = JSON.stringify({accion:'getAll'});
+    const json = await jsonpRequest(url, payload);
+    if(!json){ setSyncStatus('error'); return; }
     if(json.ok && json.values && Object.keys(json.values).length > 0){
       Object.entries(json.values).forEach(([k,v])=>{ if(v) localStorage.setItem(k,v); });
       setSyncStatus('ok');
