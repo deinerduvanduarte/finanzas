@@ -63,6 +63,8 @@ body { font-family: 'DM Mono', monospace; background: var(--bg); color: var(--te
 .mov-dot.gasto { background: var(--accent2); }
 .mov-dot.ahorro { background: var(--yellow); }
 .mov-dot.deuda { background: #ff6a9f; }
+.mov-dot.prestamo { background: #54a0ff; }
+.mov-dot.cobro { background: var(--green); }
 .mov-info { flex: 1; }
 .mov-concepto { font-size: 13px; font-weight: 500; }
 .mov-meta { font-size: 11px; color: var(--text2); margin-top: 2px; }
@@ -71,6 +73,8 @@ body { font-family: 'DM Mono', monospace; background: var(--bg); color: var(--te
 .mov-monto.gasto { color: var(--accent2); }
 .mov-monto.ahorro { color: var(--yellow); }
 .mov-monto.deuda { color: #ff6a9f; }
+.mov-monto.prestamo { color: #54a0ff; }
+.mov-monto.cobro { color: var(--green); }
 .mov-actions { display: flex; gap: 5px; margin-top: 5px; justify-content: flex-end; }
 .btn-icon { background: var(--surface2); border: 1px solid var(--border); color: var(--text2); padding: 3px 8px; border-radius: 5px; font-size: 11px; cursor: pointer; }
 .btn-icon:hover { border-color: var(--accent); color: var(--accent); }
@@ -121,6 +125,8 @@ body { font-family: 'DM Mono', monospace; background: var(--bg); color: var(--te
 .tipo-btn.tg { background: rgba(255,106,106,0.15); border-color: var(--accent2); color: var(--accent2); }
 .tipo-btn.ta { background: rgba(255,225,79,0.15); border-color: var(--yellow); color: var(--yellow); }
 .tipo-btn.td { background: rgba(255,106,106,0.15); border-color: #ff6a9f; color: #ff6a9f; }
+.tipo-btn.tp { background: rgba(84,160,255,0.15); border-color: #54a0ff; color: #54a0ff; }
+.tipo-btn.tc { background: rgba(79,255,176,0.15); border-color: var(--green); color: var(--green); }
 .btn-save { width: 100%; padding: 13px; border-radius: 11px; border: none; background: var(--accent); color: white; font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 8px; }
 .btn-cancel { width: 100%; padding: 11px; border-radius: 11px; border: 1px solid var(--border); background: transparent; color: var(--text2); font-family: 'DM Mono', monospace; font-size: 13px; cursor: pointer; margin-top: 8px; }
 .obj-select-btn { width: 100%; text-align: left; background: var(--surface2); border: 1px solid var(--border); color: var(--text); font-family: 'DM Mono', monospace; font-size: 13px; padding: 12px 14px; border-radius: 10px; cursor: pointer; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
@@ -184,6 +190,7 @@ body { font-family: 'DM Mono', monospace; background: var(--bg); color: var(--te
   <button class="tab" onclick="setTab('objetivos',this)">Objetivos</button>
   <button class="tab" onclick="setTab('categorias',this)">Categorías</button>
   <button class="tab" onclick="setTab('deudas',this)">Deudas</button>
+  <button class="tab" onclick="setTab('prestamos',this)">Préstamos</button>
 </div>
 
 <div id="tab-movimientos">
@@ -214,6 +221,11 @@ body { font-family: 'DM Mono', monospace; background: var(--bg); color: var(--te
   <div style="padding:0 16px" id="listaDeudas"></div>
 </div>
 
+<div id="tab-prestamos" style="display:none">
+  <div class="section-title">🤝 Préstamos</div>
+  <div style="padding:0 16px" id="listaPrestamos"></div>
+</div>
+
 <button class="fab" onclick="abrirModal()">+</button>
 
 <!-- MODAL MOVIMIENTO -->
@@ -227,6 +239,8 @@ body { font-family: 'DM Mono', monospace; background: var(--bg); color: var(--te
         <button class="tipo-btn" id="btn-gasto" onclick="setTipo('gasto')">🔴 Gasto</button>
         <button class="tipo-btn" id="btn-ahorro" onclick="setTipo('ahorro')">💛 Ahorro</button>
         <button class="tipo-btn" id="btn-deuda" onclick="setTipo('deuda')">💳 Deuda</button>
+        <button class="tipo-btn" id="btn-prestamo" onclick="setTipo('prestamo')">🤝 Préstamo</button>
+        <button class="tipo-btn" id="btn-cobro" onclick="setTipo('cobro')">💰 Cobro</button>
       </div>
     </div>
     <div class="form-group"><label class="form-label">Concepto</label><input class="form-input" id="inConcepto" placeholder="Ej: Empanadas, Gym, Sueldo..."/></div>
@@ -511,7 +525,7 @@ async function syncConInteligente(){
       const k = localStorage.key(i);
       if(!k) continue;
       if(k.startsWith('fin_') || k.startsWith('fijos_') ||
-         k === K_OBJS || k === K_DEUDAS || k === K_ACTIVOS ||
+         k === K_OBJS || k === K_DEUDAS || k === K_PRESTAMOS || k === K_ACTIVOS ||
          k === K_OCULTOS || k === K_CATS_GAS || k === K_CATS_ING){
         if(!json.values[k]){
           syncSet(k, localStorage.getItem(k));
@@ -558,11 +572,12 @@ function calcSaldoMes(m,a){
   const data=gd(m,a);
   const movs=data.movimientos;
   const ing=movs.filter(x=>x.tipo==='ingreso').reduce((s,x)=>s+x.monto,0);
-  const gas=movs.filter(x=>x.tipo==='gasto'||x.tipo==='deuda').reduce((s,x)=>s+x.monto,0);
+  const gas=movs.filter(x=>x.tipo==='gasto'||x.tipo==='deuda'||x.tipo==='prestamo').reduce((s,x)=>s+x.monto,0);
+  const cobros=movs.filter(x=>x.tipo==='cobro').reduce((s,x)=>s+x.monto,0);
   const aho=movs.filter(x=>x.tipo==='ahorro').reduce((s,x)=>s+x.monto,0);
   const fijos=gf(m,a);
   const fp=fijos.filter(f=>f.pagado).reduce((s,f)=>s+(f.real!==undefined?f.real:f.monto),0);
-  return getRemanente(m,a)+ing-gas-aho-fp;
+  return getRemanente(m,a)+ing+cobros-gas-aho-fp;
 }
 
 // ── RENDER PRINCIPAL ──────────────────────────────────────────────────
@@ -570,13 +585,14 @@ function render(){
   const data=gd(mesActual,anioActual);
   const movs=[...data.movimientos].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
   const ing=movs.filter(x=>x.tipo==='ingreso').reduce((s,x)=>s+x.monto,0);
-  const gas=movs.filter(x=>x.tipo==='gasto'||x.tipo==='deuda').reduce((s,x)=>s+x.monto,0);
+  const gas=movs.filter(x=>x.tipo==='gasto'||x.tipo==='deuda'||x.tipo==='prestamo').reduce((s,x)=>s+x.monto,0);
+  const cobros=movs.filter(x=>x.tipo==='cobro').reduce((s,x)=>s+x.monto,0);
   const aho=movs.filter(x=>x.tipo==='ahorro').reduce((s,x)=>s+x.monto,0);
   const fijos=gf(mesActual,anioActual);
   const fp=fijos.filter(f=>f.pagado).reduce((s,f)=>s+(f.real!==undefined?f.real:f.monto),0);
   const fe=fijos.reduce((s,f)=>s+f.monto,0);
   const rem=getRemanente(mesActual,anioActual);
-  const saldo=rem+ing-gas-aho-fp;
+  const saldo=rem+ing+cobros-gas-aho-fp;
   const objAcum=getObjs().reduce((s,o)=>s+o.acumulado,0);
 
   document.getElementById('totalSaldo').textContent='$'+saldo.toLocaleString('es-CO');
@@ -602,11 +618,11 @@ function render(){
         <div class="mov-dot ${m.tipo}"></div>
         <div class="mov-info">
           <div class="mov-concepto">${m.concepto}</div>
-          <div class="mov-meta">${m.categoria} · ${m.metodo} · ${ff(m.fecha)}${m.objNombre?' · 🎯 '+m.objNombre:''}${m.deudaNombre?' · 💳 '+m.deudaNombre:''}</div>
+          <div class="mov-meta">${m.categoria} · ${m.metodo} · ${ff(m.fecha)}${m.objNombre?' · 🎯 '+m.objNombre:''}${m.deudaNombre?' · 💳 '+m.deudaNombre:''}${m.prestamoNombre?' · 🤝 '+m.prestamoNombre:''}</div>
           ${m.obs?'<div class="mov-meta" style="color:var(--text)">'+m.obs+'</div>':''}
         </div>
         <div>
-          <div class="mov-monto ${m.tipo}">${m.tipo==='gasto'?'-':'+'}$${m.monto.toLocaleString('es-CO')}</div>
+          <div class="mov-monto ${m.tipo}">${(m.tipo==='gasto'||m.tipo==='deuda'||m.tipo==='prestamo')?'-':'+'}$${m.monto.toLocaleString('es-CO')}</div>
           <div class="mov-actions">
             <button class="btn-icon" onclick="editarMov(${realIdx})">✏</button>
             <button class="btn-icon del" onclick="eliminarMov(${realIdx})">🗑</button>
@@ -816,12 +832,13 @@ function renderCategorias(){
 function setTab(tab,btn){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   btn.classList.add('active');
-  ['movimientos','fijos','objetivos','categorias','deudas'].forEach(t=>{
+  ['movimientos','fijos','objetivos','categorias','deudas','prestamos'].forEach(t=>{
     document.getElementById('tab-'+t).style.display=t===tab?'':'none';
   });
   if(tab==='objetivos') renderObjetivos();
   if(tab==='categorias') renderCategorias();
   if(tab==='deudas') renderDeudas();
+  if(tab==='prestamos') renderPrestamos();
 }
 
 // ── MESES ──────────────────────────────────────────────────────────
@@ -942,14 +959,16 @@ function cerrarModal(id){ document.getElementById(id).classList.remove('open'); 
 
 function setTipo(tipo,catSel=null){
   tipoActual=tipo;
-  ['ingreso','gasto','ahorro','deuda'].forEach(t=>{
+  ['ingreso','gasto','ahorro','deuda','prestamo','cobro'].forEach(t=>{
     const b=document.getElementById('btn-'+t);
-    b.className='tipo-btn'+(t===tipo?' t'+t[0]:'');
+    if(b) b.className='tipo-btn'+(t===tipo?' t'+t[0]:'');
   });
   let cats;
   if(tipo==='ingreso') cats=getCatsIngreso();
   else if(tipo==='ahorro') cats=[...getObjs().map(o=>o.nombre),...CATS_AHORRO_BASE];
   else if(tipo==='deuda') cats=getDeudas().map(d=>d.nombre);
+  else if(tipo==='prestamo') cats=getPrestamos().length>0?getPrestamos().map(p=>p.nombre):['Nueva persona'];
+  else if(tipo==='cobro') cats=getPrestamos().map(p=>p.nombre);
   else cats=getCatsGasto();
   const sel=document.getElementById('inCategoria');
   sel.innerHTML=cats.map(c=>`<option ${c===catSel?'selected':''}>${c}</option>`).join('');
@@ -964,6 +983,18 @@ function eliminarMov(idx){
   if(m.tipo==='ahorro'&&m.objIdx!==undefined){
     const objs=getObjs();
     if(objs[m.objIdx]){ objs[m.objIdx].acumulado=Math.max(0,objs[m.objIdx].acumulado-m.monto); setObjs(objs); }
+  }
+  // Revertir préstamo
+  if(m.tipo==='prestamo'&&m.prestamoNombre){
+    const prestamos=getPrestamos();
+    const pIdx=prestamos.findIndex(p=>p.nombre===m.prestamoNombre);
+    if(pIdx>=0){ prestamos[pIdx].total=Math.max(0,prestamos[pIdx].total-m.monto); setPrestamos(prestamos); }
+  }
+  // Revertir cobro de préstamo
+  if(m.tipo==='cobro'&&m.prestamoNombre){
+    const prestamos=getPrestamos();
+    const pIdx=prestamos.findIndex(p=>p.nombre===m.prestamoNombre);
+    if(pIdx>=0){ prestamos[pIdx].recibido=Math.max(0,prestamos[pIdx].recibido-m.monto); setPrestamos(prestamos); }
   }
   // Revertir pago de deuda por nombre
   if(m.tipo==='deuda'&&m.deudaNombre){
@@ -1038,6 +1069,39 @@ function guardarMov(){
       data2.movimientos[mi].deudaNombre=categoria;
       sd(data2,mesMov2,anioMov2);
     }
+    render(); return;
+  }
+
+  // Si es tipo prestamo, registrar en préstamos
+  if(tipoActual==='prestamo'){
+    const prestamos=getPrestamos();
+    const pIdx=prestamos.findIndex(p=>p.nombre===categoria);
+    if(pIdx>=0){
+      // Sumar al total del préstamo existente
+      prestamos[pIdx].total=(prestamos[pIdx].total||0)+monto;
+      setPrestamos(prestamos);
+    } else {
+      // Crear nuevo préstamo automáticamente
+      prestamos.push({nombre:categoria,total:monto,recibido:0});
+      setPrestamos(prestamos);
+    }
+    const data3=gd(mesMov2,anioMov2);
+    const mi3=data3.movimientos.findIndex(m=>m.id===mov.id);
+    if(mi3>=0){ data3.movimientos[mi3].prestamoNombre=categoria; sd(data3,mesMov2,anioMov2); }
+    render(); return;
+  }
+
+  // Si es tipo cobro, registrar pago recibido en préstamos
+  if(tipoActual==='cobro'){
+    const prestamos=getPrestamos();
+    const pIdx=prestamos.findIndex(p=>p.nombre===categoria);
+    if(pIdx>=0){
+      prestamos[pIdx].recibido=(prestamos[pIdx].recibido||0)+monto;
+      setPrestamos(prestamos);
+    }
+    const data3=gd(mesMov2,anioMov2);
+    const mi3=data3.movimientos.findIndex(m=>m.id===mov.id);
+    if(mi3>=0){ data3.movimientos[mi3].prestamoNombre=categoria; sd(data3,mesMov2,anioMov2); }
     render(); return;
   }
 
@@ -1418,6 +1482,125 @@ function eliminarCat(i){
     const cats=getCatsIngreso(); cats.splice(i,1); setCatsIngreso(cats);
   }
   renderCatsModal();
+}
+
+// ── PRÉSTAMOS ────────────────────────────────────────────────────
+const K_PRESTAMOS = 'prestamos_v1';
+function getPrestamos(){ const r=localStorage.getItem(K_PRESTAMOS); return r?JSON.parse(r):[]; }
+function setPrestamos(d){ localStorage.setItem(K_PRESTAMOS,JSON.stringify(d)); syncSet(K_PRESTAMOS,JSON.stringify(d)); }
+
+function renderPrestamos(){
+  const prestamos = getPrestamos();
+  const totalPrestado = prestamos.reduce((s,p)=>s+p.total,0);
+  const totalRecibido = prestamos.reduce((s,p)=>s+p.recibido,0);
+  const totalPendiente = totalPrestado - totalRecibido;
+  const container = document.getElementById('listaPrestamos');
+
+  let html = `<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div>
+        <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:1px">Total por cobrar</div>
+        <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:#54a0ff">$${totalPendiente.toLocaleString('es-CO')}</div>
+        <div style="font-size:11px;color:var(--text2)">de $${totalPrestado.toLocaleString('es-CO')} prestados</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:1px">Recibido</div>
+        <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--green)">$${totalRecibido.toLocaleString('es-CO')}</div>
+      </div>
+    </div>
+    <div style="background:var(--surface2);border-radius:6px;height:8px;overflow:hidden">
+      <div style="background:var(--green);height:100%;width:${totalPrestado>0?Math.round(totalRecibido/totalPrestado*100):0}%;border-radius:6px;transition:width 0.4s"></div>
+    </div>
+  </div>`;
+
+  if(prestamos.length === 0){
+    html += '<div class="empty-state"><div class="emoji">🤝</div>Sin préstamos registrados.<br>Registrá un movimiento tipo Préstamo.</div>';
+  }
+
+  prestamos.forEach((p,i)=>{
+    const pendiente = Math.max(0, p.total - p.recibido);
+    const pct = p.total > 0 ? Math.min(100, Math.round(p.recibido/p.total*100)) : 0;
+    const col = pct>=100?'var(--green)':pct>=50?'var(--yellow)':'#54a0ff';
+    html += `<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <span style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700">${p.nombre}</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:${col}">${pct}%</span>
+          <button onclick="eliminarPrestamo(${i})" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:13px">✕</button>
+        </div>
+      </div>
+      <div style="background:var(--surface2);border-radius:6px;height:8px;overflow:hidden;margin-bottom:8px">
+        <div style="background:${col};height:100%;width:${pct}%;border-radius:6px;transition:width 0.4s"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:12px">
+        <span>Recibido: <span style="color:var(--green);font-weight:600">$${p.recibido.toLocaleString('es-CO')}</span></span>
+        <span>Pendiente: <span style="color:${col};font-weight:600">$${pendiente.toLocaleString('es-CO')}</span></span>
+        <span>Total: <span style="color:var(--text)">$${p.total.toLocaleString('es-CO')}</span></span>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <div style="flex:1">
+          <div style="font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Total prestado</div>
+          <input type="text" inputmode="numeric" value="${formatNum(p.total)}"
+            style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'DM Mono',monospace;font-size:12px;padding:6px 8px;border-radius:7px;outline:none"
+            onfocus="onFocusUnformat(this)" onblur="onBlurFormat(this)" onchange="actualizarPrestamo(${i},'total',parseNum(this.value))"/>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Recibido 💰</div>
+          <input type="text" inputmode="numeric" value="${formatNum(p.recibido)}"
+            style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--green);font-family:'DM Mono',monospace;font-size:12px;padding:6px 8px;border-radius:7px;outline:none"
+            onfocus="onFocusUnformat(this)" onblur="onBlurFormat(this)" onchange="actualizarPrestamo(${i},'recibido',parseNum(this.value))"/>
+        </div>
+      </div>
+      <div style="background:var(--surface2);border:1px dashed var(--border);border-radius:9px;padding:10px 12px">
+        <div style="font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">💰 Registrar cobro</div>
+        <div style="display:flex;gap:8px">
+          <input type="number" id="cobro_${i}" placeholder="0"
+            style="flex:1;background:var(--bg);border:1px solid var(--border);color:var(--green);font-family:'DM Mono',monospace;font-size:13px;padding:8px 10px;border-radius:7px;outline:none"
+            onkeydown="if(event.key==='Enter')cobrarPrestamo(${i})"/>
+          <button onclick="cobrarPrestamo(${i})"
+            style="background:var(--green);border:none;color:var(--bg);font-family:'Syne',sans-serif;font-size:12px;font-weight:700;padding:8px 14px;border-radius:7px;cursor:pointer;white-space:nowrap">
+            + Cobrar
+          </button>
+        </div>
+      </div>
+    </div>`;
+  });
+
+  html += `<button onclick="agregarPrestamo()" style="width:100%;padding:13px;border-radius:11px;border:1px dashed var(--border);background:transparent;color:var(--text2);font-family:'DM Mono',monospace;font-size:13px;cursor:pointer;margin-bottom:16px">+ Nuevo préstamo</button>`;
+  container.innerHTML = html;
+}
+
+function cobrarPrestamo(i){
+  const inp = document.getElementById('cobro_'+i);
+  const v = parseNum(inp.value);
+  if(!v||v<=0){inp.focus();return;}
+  const prestamos = getPrestamos();
+  prestamos[i].recibido = (prestamos[i].recibido||0) + v;
+  setPrestamos(prestamos); inp.value='';
+  renderPrestamos(); render();
+}
+function actualizarPrestamo(i,campo,v){
+  const prestamos=getPrestamos(); prestamos[i][campo]=parseFloat(v)||0;
+  setPrestamos(prestamos); renderPrestamos(); render();
+}
+function eliminarPrestamo(i){
+  if(!confirm('¿Eliminar este préstamo?'))return;
+  const prestamos=getPrestamos(); prestamos.splice(i,1);
+  setPrestamos(prestamos); renderPrestamos(); render();
+}
+function agregarPrestamo(){
+  const nombre=prompt('¿A quién le prestaste?');
+  if(!nombre||!nombre.trim())return;
+  const totalStr=prompt('¿Cuánto le prestaste? (ej: 500000):');
+  if(!totalStr)return;
+  const total=parseNum(totalStr)||parseFloat(totalStr)||0;
+  if(!total)return;
+  const prestamos=getPrestamos();
+  if(prestamos.find(p=>p.nombre===nombre.trim())){
+    alert('Ya existe un préstamo para esa persona.');return;
+  }
+  prestamos.push({nombre:nombre.trim(),total,recibido:0});
+  setPrestamos(prestamos); renderPrestamos(); render();
 }
 
 // ── INIT ──────────────────────────────────────────────────────────
