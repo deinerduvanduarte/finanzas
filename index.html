@@ -1265,12 +1265,11 @@ async function syncForzado(){
   setSyncStatus('pulling');
   try {
     const payload = JSON.stringify({accion:'getAll'});
-    alert('Conectando al Sheets...');
     const json = await fetchJsonp(url, payload);
-    if(!json){ alert('❌ Sin respuesta (timeout de 8 segundos).'); setSyncStatus('error'); return; }
-    if(!json.ok){ alert('❌ Error del servidor: ' + JSON.stringify(json)); setSyncStatus('error'); return; }
+    if(!json){ alert('❌ Sin respuesta del servidor. Verificá la URL del script.'); setSyncStatus('error'); return; }
+    if(!json.ok){ alert('❌ Error: ' + JSON.stringify(json)); setSyncStatus('error'); return; }
     const claves = json.values ? Object.keys(json.values) : [];
-    if(claves.length === 0){ alert('⚠️ El Sheets respondió pero está vacío.'); setSyncStatus('error'); return; }
+    if(claves.length === 0){ alert('⚠️ El Sheets está vacío o sin datos.'); setSyncStatus('error'); return; }
     let aplicados = 0;
     claves.forEach(k => {
       const v = json.values[k];
@@ -1279,7 +1278,7 @@ async function syncForzado(){
     setSyncStatus('ok');
     cerrarModal('modalConfig');
     render(); renderStrip();
-    alert('✅ ' + aplicados + ' claves aplicadas de ' + claves.length + ' en el Sheets.');
+    alert('✅ ' + aplicados + ' de ' + claves.length + ' claves aplicadas.');
   } catch(e){
     setSyncStatus('error');
     alert('❌ Error: ' + e.message);
