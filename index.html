@@ -426,14 +426,13 @@ async function processSyncQueue(){
 async function fetchJsonp(url, payload){
   // Método 1: fetch directo
   try {
-    const res = await fetch(url + '?payload=' + encodeURIComponent(payload), {
-      method: 'GET',
-      headers: {'Accept': 'application/json'},
-    });
+    const res = await fetch(url + '?payload=' + encodeURIComponent(payload));
     if(res.ok){
       const text = await res.text();
-      // Puede venir como JSONP o JSON puro
-      const clean = text.trim().replace(/^[a-zA-Z_$][a-zA-Z0-9_$]*\(/, '').replace(/\);?\s*$/, '');
+      // Limpiar wrapper JSONP si existe
+      const i = text.indexOf('{');
+      const j = text.lastIndexOf('}');
+      const clean = i >= 0 && j >= 0 ? text.substring(i, j+1) : text;
       return JSON.parse(clean);
     }
   } catch(e1) {
@@ -472,88 +471,57 @@ async function syncPull(){
 
 async function syncConInteligente(){
   const url = getScriptUrl();
-  const sheetId = localStorage.getItem('gs_id');
-  if(!url || !sheetId) return;
+  if(!url) return;
   setSyncStatus('pulling');
   try {
-    // Leer directamente del Sheet publicado como CSV (sin CORS)
-    const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&sheet=DATA&t=${Date.now()}`;
-    const res = await fetch(csvUrl);
-    const text = await res.text();
-    // Google devuelve /*O_o*/
-google.visualization.Query.setResponse({...})
-    const jsonStr = text.replace(/^[^(]+\(/, '').replace(/\);?\s*$/, '');
-    const gviz = JSON.parse(jsonStr);
-    
-    // Parsear la tabla de gviz
-    const rows = gviz.table.rows;
-    const json = {ok: true, values: {}};
-    rows.forEach(row => {
-      if(row.c && row.c[0] && row.c[0].v && row.c[1] && row.c[1].v){
-        json.values[row.c[0].v] = row.c[1].v;
-      }
-    });
-    if(!json.ok || !json.values){ setSyncStatus('ok'); return; }
-    
+    const payload = JSON.stringify({accion:'getAll'});
+    const json = await fetchJsonp(url, payload);
+    if(!json || !json.ok || !json.values){ setSyncStatus('ok'); return; }
     let changed = false;
-    const remotos = json.values;
-    
-    // Para cada clave remota, comparar timestamps
-    for(const [k, vRemoto] of Object.entries(remotos)){
+    for(const [k, vRemoto] of Object.entries(json.values)){
       if(!vRemoto || vRemoto === 'undefined') continue;
       const vLocal = localStorage.getItem(k);
-      
       if(!vLocal){
-        // No hay local, usar remoto
         localStorage.setItem(k, vRemoto);
         changed = true;
         continue;
       }
-      
       try {
         const remoto = JSON.parse(vRemoto);
         const local = JSON.parse(vLocal);
         const tsRemoto = remoto._ts || 0;
         const tsLocal = local._ts || 0;
-        
         if(tsRemoto > tsLocal){
-          // Remoto es más nuevo, actualizar local
           localStorage.setItem(k, vRemoto);
           changed = true;
         } else if(tsLocal > tsRemoto){
-          // Local es más nuevo, subir al Sheets
           syncSet(k, vLocal);
         }
-        // Si son iguales, no hacer nada
       } catch(e){
-        // No es JSON, usar el que tenga contenido
         if(vRemoto && vRemoto !== vLocal){
           localStorage.setItem(k, vRemoto);
           changed = true;
         }
       }
     }
-    
-    // También subir claves locales que no están en remoto
+    // Subir claves locales que no están en remoto
     for(let i=0; i<localStorage.length; i++){
       const k = localStorage.key(i);
       if(!k) continue;
-      if(k.startsWith('fin_') || k.startsWith('fijos_') || 
-         k === K_OBJS || k === K_DEUDAS || k === K_ACTIVOS || 
+      if(k.startsWith('fin_') || k.startsWith('fijos_') ||
+         k === K_OBJS || k === K_DEUDAS || k === K_ACTIVOS ||
          k === K_OCULTOS || k === K_CATS_GAS || k === K_CATS_ING){
-        if(!remotos[k]){
+        if(!json.values[k]){
           syncSet(k, localStorage.getItem(k));
         }
       }
     }
-    
     if(changed){ render(); renderStrip(); }
     setSyncStatus('ok');
   } catch(e) {
     setSyncStatus('error');
   }
 }
-
 function setSyncStatus(status){
   const dot = document.getElementById('syncDot');
   const txt = document.getElementById('syncText');
