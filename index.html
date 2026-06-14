@@ -469,9 +469,11 @@ async function syncPull(){
   await syncConInteligente();
 }
 
+let syncEnProceso = false;
 async function syncConInteligente(){
   const url = getScriptUrl();
-  if(!url) return;
+  if(!url || syncEnProceso) return;
+  syncEnProceso = true;
   setSyncStatus('pulling');
   try {
     const payload = JSON.stringify({accion:'getAll'});
@@ -520,6 +522,8 @@ async function syncConInteligente(){
     setSyncStatus('ok');
   } catch(e) {
     setSyncStatus('error');
+  } finally {
+    syncEnProceso = false;
   }
 }
 function setSyncStatus(status){
@@ -1223,7 +1227,7 @@ function checkSync(){
   if(url){
     setSyncStatus('ok');
     syncConInteligente(); // sync al abrir
-    setInterval(syncConInteligente, 15000); // sync cada 15 segundos
+    setInterval(syncConInteligente, 10000); // sync cada 10 segundos
   } else {
     document.getElementById('syncDot').className='sync-dot';
     document.getElementById('syncText').textContent='Sin configurar Google Sheets';
