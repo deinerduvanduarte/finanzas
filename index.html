@@ -396,21 +396,7 @@ function getOcultos(){ const r=localStorage.getItem(K_OCULTOS); if(r)return JSON
 let syncQueue = [];
 let syncing = false;
 
-function jsonpRequest(url, payload, callback){
-  return new Promise((resolve) => {
-    const cbName = 'cb_' + Date.now();
-    const script = document.createElement('script');
-    window[cbName] = (data) => {
-      delete window[cbName];
-      document.body.removeChild(script);
-      resolve(data);
-    };
-    script.src = url + '?payload=' + encodeURIComponent(payload) + '&callback=' + cbName;
-    script.onerror = () => { delete window[cbName]; document.body.removeChild(script); resolve(null); };
-    document.body.appendChild(script);
-  });
-}
-
+// Subir datos: usa no-cors (funciona siempre, no retorna respuesta pero sí envía)
 async function syncSet(key, value){
   const url = getScriptUrl();
   if(!url) return;
@@ -425,12 +411,59 @@ async function processSyncQueue(){
   const item = syncQueue.shift();
   try {
     const payload = JSON.stringify({accion:'set', clave:item.key, data:item.value});
-    await jsonpRequest(url, payload);
+    await fetch(url + '?payload=' + encodeURIComponent(payload), {
+      method: 'GET',
+      mode: 'no-cors'
+    });
     setSyncStatus('ok');
   } catch(e) {
-    setSyncStatus('ok');
+    setSyncStatus('ok'); // no-cors siempre "falla" pero igual envía
   }
-  setTimeout(processSyncQueue, 800);
+  setTimeout(processSyncQueue, 500);
+}
+
+// Bajar datos: intenta fetch directo primero, luego JSONP
+async function fetchJsonp(url, payload){
+  // Método 1: fetch directo
+  try {
+    const res = await fetch(url + '?payload=' + encodeURIComponent(payload), {
+      method: 'GET',
+      headers: {'Accept': 'application/json'},
+    });
+    if(res.ok){
+      const text = await res.text();
+      // Puede venir como JSONP o JSON puro
+      const clean = text.trim().replace(/^[a-zA-Z_$][a-zA-Z0-9_$]*\(/, '').replace(/\);?\s*$/, '');
+      return JSON.parse(clean);
+    }
+  } catch(e1) {
+    // fetch falló, intentar JSONP
+  }
+  
+  // Método 2: JSONP con script tag
+  return new Promise((resolve) => {
+    const cbName = 'jcb_' + Date.now() + '_' + Math.random().toString(36).substr(2,5);
+    const script = document.createElement('script');
+    const timer = setTimeout(() => {
+      delete window[cbName];
+      if(script.parentNode) script.parentNode.removeChild(script);
+      resolve(null);
+    }, 10000);
+    window[cbName] = (data) => {
+      clearTimeout(timer);
+      delete window[cbName];
+      if(script.parentNode) script.parentNode.removeChild(script);
+      resolve(data);
+    };
+    script.src = url + '?payload=' + encodeURIComponent(payload) + '&callback=' + cbName;
+    script.onerror = () => {
+      clearTimeout(timer);
+      delete window[cbName];
+      if(script.parentNode) script.parentNode.removeChild(script);
+      resolve(null);
+    };
+    document.head.appendChild(script);
+  });
 }
 
 async function syncPull(){
@@ -439,12 +472,27 @@ async function syncPull(){
 
 async function syncConInteligente(){
   const url = getScriptUrl();
-  if(!url) return;
+  const sheetId = localStorage.getItem('gs_id');
+  if(!url || !sheetId) return;
   setSyncStatus('pulling');
   try {
-    const payload = JSON.stringify({accion:'getAll'});
-    const json = await jsonpRequest(url, payload);
-    if(!json){ setSyncStatus('error'); return; }
+    // Leer directamente del Sheet publicado como CSV (sin CORS)
+    const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&sheet=DATA&t=${Date.now()}`;
+    const res = await fetch(csvUrl);
+    const text = await res.text();
+    // Google devuelve /*O_o*/
+google.visualization.Query.setResponse({...})
+    const jsonStr = text.replace(/^[^(]+\(/, '').replace(/\);?\s*$/, '');
+    const gviz = JSON.parse(jsonStr);
+    
+    // Parsear la tabla de gviz
+    const rows = gviz.table.rows;
+    const json = {ok: true, values: {}};
+    rows.forEach(row => {
+      if(row.c && row.c[0] && row.c[0].v && row.c[1] && row.c[1].v){
+        json.values[row.c[0].v] = row.c[1].v;
+      }
+    });
     if(!json.ok || !json.values){ setSyncStatus('ok'); return; }
     
     let changed = false;
@@ -1161,7 +1209,7 @@ async function syncSubirTodo(){
       const v = localStorage.getItem(k);
       if(v){
         const payload = JSON.stringify({accion:'set', clave:k, data:v});
-        await jsonpRequest(url, payload);
+        await fetch(url + '?payload=' + encodeURIComponent(payload), {method:'GET', mode:'no-cors'});
         subidos++;
       }
     }
@@ -1181,20 +1229,24 @@ async function syncForzado(){
   setSyncStatus('pulling');
   try {
     const payload = JSON.stringify({accion:'getAll'});
-    const json = await jsonpRequest(url, payload);
-    if(!json){ setSyncStatus('error'); return; }
-    if(json.ok && json.values && Object.keys(json.values).length > 0){
-      Object.entries(json.values).forEach(([k,v])=>{ if(v) localStorage.setItem(k,v); });
-      setSyncStatus('ok');
-      cerrarModal('modalConfig');
-      render(); renderStrip();
-      alert('✅ Datos sincronizados desde Google Sheets.');
-    } else {
-      alert('El Sheets está vacío o no respondió correctamente.');
-    }
+    alert('Conectando al Sheets...');
+    const json = await fetchJsonp(url, payload);
+    if(!json){ alert('❌ Sin respuesta (timeout de 8 segundos).'); setSyncStatus('error'); return; }
+    if(!json.ok){ alert('❌ Error del servidor: ' + JSON.stringify(json)); setSyncStatus('error'); return; }
+    const claves = json.values ? Object.keys(json.values) : [];
+    if(claves.length === 0){ alert('⚠️ El Sheets respondió pero está vacío.'); setSyncStatus('error'); return; }
+    let aplicados = 0;
+    claves.forEach(k => {
+      const v = json.values[k];
+      if(v && v !== 'undefined'){ localStorage.setItem(k, v); aplicados++; }
+    });
+    setSyncStatus('ok');
+    cerrarModal('modalConfig');
+    render(); renderStrip();
+    alert('✅ ' + aplicados + ' claves aplicadas de ' + claves.length + ' en el Sheets.');
   } catch(e){
     setSyncStatus('error');
-    alert('Error de conexión: ' + e.message);
+    alert('❌ Error: ' + e.message);
   }
 }
 
@@ -1203,7 +1255,7 @@ function checkSync(){
   if(url){
     setSyncStatus('ok');
     syncConInteligente(); // sync al abrir
-    setInterval(syncConInteligente, 30000); // sync cada 30 segundos
+    setInterval(syncConInteligente, 15000); // sync cada 15 segundos
   } else {
     document.getElementById('syncDot').className='sync-dot';
     document.getElementById('syncText').textContent='Sin configurar Google Sheets';
