@@ -748,6 +748,37 @@ function renderObjetivos(){
   document.getElementById('listaObjetivos').innerHTML=html;
 }
 
+function retirarObj(i){
+  const inp = document.getElementById('retiro_'+i);
+  const v = parseFloat(inp.value);
+  if(!v||v<=0){inp.focus();return;}
+  const objs = getObjs();
+  if(objs[i].acumulado < v){
+    alert('No podés retirar más de lo acumulado ($' + objs[i].acumulado.toLocaleString('es-CO') + ')');
+    return;
+  }
+  objs[i].acumulado = objs[i].acumulado - v;
+  setObjs(objs);
+  // Registrar como gasto en el mes actual
+  const data = gd(mesActual, anioActual);
+  const mov = {
+    concepto: 'Retiro de ' + objs[i].nombre,
+    monto: v,
+    categoria: 'Retiro',
+    metodo: 'Transferencia',
+    fecha: new Date().toISOString().split('T')[0],
+    obs: 'Retiro del objetivo: ' + objs[i].nombre,
+    tipo: 'gasto',
+    id: Date.now()
+  };
+  data.movimientos.push(mov);
+  sd(data, mesActual, anioActual);
+  inp.value = '';
+  renderObjetivos();
+  render();
+  alert('✅ Retiro de $' + v.toLocaleString('es-CO') + ' registrado como gasto en ' + MESES[mesActual] + '.');
+}
+
 function abonarObj(i){
   const inp=document.getElementById('abono_'+i);
   const v=parseFloat(inp.value);
@@ -887,6 +918,23 @@ function ocultarMes(m,a){
   if(mesActual===m&&anioActual===a&&ac.length>0){ mesActual=ac[ac.length-1].mes; anioActual=ac[ac.length-1].anio; }
   renderStrip(); render();
 }
+function eliminarMesDefinitivo(m,a){
+  if(!confirm('¿Eliminar permanentemente ' + MESES[m] + ' ' + a + '? Esta acción no se puede deshacer.')) return;
+  // Quitar de activos y ocultos
+  setActivos(getActivos().filter(x=>!(x.mes===m&&x.anio===a)));
+  setOcultos(getOcultos().filter(x=>!(x.mes===m&&x.anio===a)));
+  // Limpiar localStorage
+  localStorage.removeItem('fin_'+a+'_'+m);
+  localStorage.removeItem('fijos_'+a+'_'+m);
+  // Si era el mes activo, ir al mes actual
+  if(mesActual===m&&anioActual===a){
+    mesActual=new Date().getMonth();
+    anioActual=new Date().getFullYear();
+  }
+  renderStrip();
+  render();
+}
+
 function restaurarMes(m,a){
   let oc=getOcultos().filter(x=>!(x.mes===m&&x.anio===a));
   let ac=getActivos(); if(!ac.find(x=>x.mes===m&&x.anio===a)){ ac.push({mes:m,anio:a}); ac.sort((a,b)=>a.anio!==b.anio?a.anio-b.anio:a.mes-b.mes); }
