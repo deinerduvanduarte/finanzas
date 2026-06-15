@@ -742,6 +742,31 @@ function renderObjetivos(){
           <button class="btn-abonar" onclick="abonarObj(${i})">+ Abonar</button>
         </div>
       </div>
+      <div style="background:var(--surface2);border:1px dashed #ff6a6a44;border-radius:9px;padding:10px 12px;margin-top:8px">
+        <div style="font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">➖ Retirar del objetivo</div>
+        <input type="text" id="retiro_concepto_${i}" placeholder="¿Para qué retirás? (ej: Cuota moto)"
+          style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'DM Mono',monospace;font-size:12px;padding:7px 10px;border-radius:7px;outline:none;margin-bottom:6px"/>
+        <div style="display:flex;gap:8px">
+          <input type="number" id="retiro_${i}" placeholder="0"
+            style="flex:1;background:var(--bg);border:1px solid var(--border);color:var(--accent2);font-family:'DM Mono',monospace;font-size:13px;padding:8px 10px;border-radius:7px;outline:none"/>
+          <button onclick="retirarObj(${i})"
+            style="background:var(--accent2);border:none;color:white;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;padding:8px 14px;border-radius:7px;cursor:pointer">
+            − Retirar
+          </button>
+        </div>
+      </div>
+      ${o.retiros && o.retiros.length > 0 ? `
+      <div style="margin-top:10px">
+        <div style="font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">📋 Historial de retiros</div>
+        ${o.retiros.slice().reverse().map(r => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
+            <div>
+              <div style="font-size:12px;color:var(--text)">${r.concepto}</div>
+              <div style="font-size:10px;color:var(--text2)">${r.fecha.split('-').reverse().join('/')}</div>
+            </div>
+            <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--accent2)">-$${r.monto.toLocaleString('es-CO')}</div>
+          </div>`).join('')}
+      </div>` : ''}
     </div>`;
   });
   html+=`<button onclick="agregarObj()" style="width:100%;padding:13px;border-radius:11px;border:1px dashed var(--border);background:transparent;color:var(--text2);font-family:'DM Mono',monospace;font-size:13px;cursor:pointer;margin-bottom:16px">+ Nuevo objetivo</button>`;
@@ -752,31 +777,25 @@ function retirarObj(i){
   const inp = document.getElementById('retiro_'+i);
   const v = parseFloat(inp.value);
   if(!v||v<=0){inp.focus();return;}
+  const concepto = document.getElementById('retiro_concepto_'+i).value.trim() || 'Sin descripción';
   const objs = getObjs();
   if(objs[i].acumulado < v){
     alert('No podés retirar más de lo acumulado ($' + objs[i].acumulado.toLocaleString('es-CO') + ')');
     return;
   }
   objs[i].acumulado = objs[i].acumulado - v;
-  setObjs(objs);
-  // Registrar como gasto en el mes actual
-  const data = gd(mesActual, anioActual);
-  const mov = {
-    concepto: 'Retiro de ' + objs[i].nombre,
+  if(!objs[i].retiros) objs[i].retiros = [];
+  objs[i].retiros.push({
     monto: v,
-    categoria: 'Retiro',
-    metodo: 'Transferencia',
+    concepto: concepto,
     fecha: new Date().toISOString().split('T')[0],
-    obs: 'Retiro del objetivo: ' + objs[i].nombre,
-    tipo: 'gasto',
     id: Date.now()
-  };
-  data.movimientos.push(mov);
-  sd(data, mesActual, anioActual);
+  });
+  setObjs(objs);
   inp.value = '';
+  document.getElementById('retiro_concepto_'+i).value = '';
   renderObjetivos();
   render();
-  alert('✅ Retiro de $' + v.toLocaleString('es-CO') + ' registrado como gasto en ' + MESES[mesActual] + '.');
 }
 
 function abonarObj(i){
@@ -898,6 +917,7 @@ function renderStrip(){
     html+=`<button class="chip ${isAct?'active':''}" onclick="cambiarMes(${mes},${anio})">
       ${MESES[mes]}${al}${td&&!isAct?' ●':''}
       <span class="btn-x" onclick="event.stopPropagation();ocultarMes(${mes},${anio})" title="Ocultar">✕</span>
+      ${(!td&&!isAct)?`<span class="btn-x" style="color:var(--accent2)" onclick="event.stopPropagation();eliminarMesDefinitivo(${mes},${anio})" title="Eliminar">🗑</span>`:''}
     </button>`;
   });
   const ult=activos[activos.length-1]||{mes:new Date().getMonth(),anio:new Date().getFullYear()};
