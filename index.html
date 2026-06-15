@@ -424,14 +424,16 @@ async function processSyncQueue(){
   syncing = true;
   const item = syncQueue.shift();
   try {
-    const payload = JSON.stringify({accion:'set', clave:item.key, data:item.value});
-    await fetch(url + '?payload=' + encodeURIComponent(payload), {
-      method: 'GET',
-      mode: 'no-cors'
+    // Usar POST para evitar límite de URL con datos grandes
+    await fetch(url, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({accion:'set', clave:item.key, data:item.value})
     });
     setSyncStatus('ok');
   } catch(e) {
-    setSyncStatus('ok'); // no-cors siempre "falla" pero igual envía
+    setSyncStatus('ok');
   }
   setTimeout(processSyncQueue, 500);
 }
@@ -1244,8 +1246,12 @@ async function syncSubirTodo(){
     for(const k of claves){
       const v = localStorage.getItem(k);
       if(v){
-        const payload = JSON.stringify({accion:'set', clave:k, data:v});
-        await fetch(url + '?payload=' + encodeURIComponent(payload), {method:'GET', mode:'no-cors'});
+        await fetch(url, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({accion:'set', clave:k, data:v})
+        });
         subidos++;
       }
     }
