@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora de Costeo Profesional</title>
+<style>
+  :root{
+    --green-dark:#0d2818; --green:#1a5632; --green-mid:#2e7d4f; --green-light:#e8f5ec;
+    --green-accent:#3fa15f; --blue:#1e3a8a; --blue2:#2547b8; --dark:#131c2b;
+    --bg:#eef1f5; --card:#ffffff; --text:#1f2937; --muted:#7b8794; --border:#e3e8ee;
+    --red:#dc2626; --amber:#d97706; --ok:#16a34a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;font-family:'Segoe UI',system-ui,-apple-system,sans-serif}
+  body{background:var(--bg);color:var(--text);padding-bottom:60px}
+  .wrap{max-width:1200px;margin:0 auto;padding:0 16px}
+
+  /* HEADER */
+  .hero{background:linear-gradient(120deg,#0d2818 0%,#1a5632 60%,#245c3a 100%);padding:34px 0;margin-bottom:22px}
+  .hero-inner{display:flex;gap:22px;align-items:center}
+  .hero-img{width:110px;height:110px;border-radius:16px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:40px;flex-shrink:0}
+  .hero .tag{color:#7fd39a;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
+  .hero h1{color:#fff;font-size:34px;font-weight:800;margin:2px 0 4px;outline:none}
+  .hero .desc{color:#b9cfc1;font-size:14px;outline:none}
+  .hero .credit{color:#7fd39a;font-size:11px;font-weight:700;letter-spacing:1.2px;margin-top:8px;text-transform:uppercase}
+  [contenteditable]:hover{background:rgba(255,255,255,.07);border-radius:4px}
+  [contenteditable]:empty::before{content:attr(data-placeholder);opacity:.45}
+
+  /* CARDS / SECTIONS */
+  .card{background:var(--card);border-radius:14px;padding:22px 26px;margin-bottom:18px;box-shadow:0 1px 3px rgba(16,42,26,.08)}
+  .sec-title{font-size:16px;font-weight:800;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+  .divider{border:none;border-top:2px dashed #dcebe1;margin:20px 0}
+  .infobox{background:var(--green-light);border-radius:10px;padding:14px 18px;font-size:13px;line-height:1.7;margin-bottom:18px}
+  .infobox b{font-weight:700}
+
+  .grid{display:grid;gap:18px}
+  .g4{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+  .g3{grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
+  .g2{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+
+  .field label{display:block;font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:#374151;margin-bottom:6px}
+  .field input[type=number], .field input[type=text]{
+    width:100%;border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;
+    font-size:19px;font-weight:700;color:var(--text);background:#fff;outline:none}
+  .field input:focus{border-color:var(--green-accent);box-shadow:0 0 0 3px rgba(63,161,95,.15)}
+  .field .hint{font-size:11.5px;color:var(--muted);margin-top:5px;line-height:1.4}
+
+  .minibox{background:var(--green-light);border-radius:10px;padding:14px 16px;font-size:13px}
+  .minibox .t{font-weight:700;margin-bottom:4px}
+
+  /* TOGGLE */
+  .toggle-row{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap}
+  .toggle-card{border:2px solid var(--green-accent);border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:12px;cursor:pointer;user-select:none;min-width:220px}
+  .switch{width:48px;height:26px;border-radius:13px;background:#cbd5d1;position:relative;transition:.2s;flex-shrink:0}
+  .switch.on{background:var(--ok)}
+  .switch::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s}
+  .switch.on::after{left:25px}
+  .dropi-cards{display:flex;flex-direction:column;gap:12px;flex:1;min-width:260px;max-width:340px}
+  .dcard{border-radius:12px;padding:14px 18px;color:#fff}
+  .dcard .lbl{font-size:10.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;opacity:.85}
+  .dcard .val{font-size:24px;font-weight:800;margin:2px 0}
+  .dcard .sub{font-size:11.5px;opacity:.8}
+  .dcard.blue{background:linear-gradient(120deg,#1e3a8a,#2f52c9)}
+  .dcard.green{background:linear-gradient(120deg,#0f5132,#1f8a55)}
+  .dcard input{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.35);border-radius:6px;color:#fff;font-size:20px;font-weight:800;padding:4px 10px;width:130px;outline:none}
+
+  /* COLLAPSIBLES */
+  details.section{background:var(--card);border-radius:14px;margin-bottom:18px;box-shadow:0 1px 3px rgba(16,42,26,.08)}
+  details.section summary{cursor:pointer;padding:18px 26px;font-weight:800;font-size:15px;list-style:none;display:flex;align-items:center;gap:8px}
+  details.section summary::after{content:'▾';margin-left:auto;color:var(--muted)}
+  details.section[open] summary::after{content:'▴'}
+  details.section .body{padding:0 26px 22px}
+  details.section summary .sub{font-weight:500;font-size:13px;color:var(--muted)}
+  .item-row{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr 40px;gap:10px;margin-bottom:10px;align-items:end}
+  .item-row.obsequio{grid-template-columns:1.6fr 1fr 40px}
+  .item-row input{border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;font-size:14px;font-weight:600;width:100%;outline:none}
+  .item-row .del{background:#fee2e2;color:#b91c1c;border:none;border-radius:8px;height:38px;cursor:pointer;font-size:16px}
+  .add-btn{background:var(--green-light);color:var(--green);border:1.5px dashed var(--green-accent);border-radius:8px;padding:8px 16px;font-weight:700;font-size:13px;cursor:pointer}
+  .col-lbl{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.5px}
+
+  /* TABLES */
+  .tbl-wrap{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap}
+  thead th{background:var(--green-dark);color:#fff;font-size:10.5px;letter-spacing:.7px;text-transform:uppercase;padding:11px 12px;text-align:left}
+  thead th:first-child{border-radius:8px 0 0 0}
+  thead th:last-child{border-radius:0 8px 0 0}
+  tbody td{padding:10px 12px;border-bottom:1px solid var(--border)}
+  tbody tr:hover{background:#f8faf9}
+  td input{border:1px solid transparent;border-radius:6px;padding:5px 8px;font-size:13px;font-weight:600;width:90px;background:#f4f7f5;outline:none}
+  td input:focus{border-color:var(--green-accent);background:#fff}
+  td input.name{width:70px}
+  .bold{font-weight:800}
+  .pos{color:var(--ok);font-weight:700}
+  .neg{color:var(--red);font-weight:700}
+  .warn-c{color:var(--amber);font-weight:700}
+  tfoot td{padding:12px;font-weight:800;background:#f0f4f1;font-size:14px}
+  .health{border-left:5px solid var(--ok);background:#dcf5e4;border-radius:8px;padding:13px 18px;font-size:14px;margin-top:16px}
+  .health.bad{border-color:var(--red);background:#fde8e8}
+  .health.mid{border-color:var(--amber);background:#fdf3e0}
+
+  /* RESUMEN */
+  .kpi{background:linear-gradient(120deg,#123a22,#1f6b3e);border-radius:12px;padding:20px;color:#fff;text-align:center}
+  .kpi .lbl{font-size:10.5px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;opacity:.85}
+  .kpi .val{font-size:30px;font-weight:800;margin:6px 0 2px}
+  .kpi .sub{font-size:12px;opacity:.8}
+
+  .offer-card{border:1px solid var(--border);border-radius:12px;padding:16px 18px;background:#fafcfb}
+  .offer-card .head{display:flex;justify-content:space-between;font-weight:800;font-size:14px;border-bottom:1.5px dashed var(--border);padding-bottom:9px;margin-bottom:11px}
+  .offer-card .head .pvp{color:var(--muted);font-weight:600;font-size:12.5px}
+  .brow{display:flex;align-items:center;gap:10px;margin-bottom:9px;font-size:13px}
+  .brow .n{flex:1}
+  .brow .n small{display:block;color:var(--muted);font-size:10.5px}
+  .bar{width:90px;height:7px;border-radius:4px;background:#e5eae7;overflow:hidden;flex-shrink:0}
+  .bar i{display:block;height:100%;border-radius:4px}
+  .brow .pct{width:52px;text-align:right;font-weight:800;font-size:13px}
+  .brow.total{border-top:1.5px dashed var(--border);padding-top:9px;font-weight:800;color:var(--ok)}
+
+  .rules{background:var(--dark);border-radius:14px;padding:22px 26px;color:#e5e9f0;margin-top:18px}
+  .rules h3{font-size:15px;margin-bottom:16px;font-weight:800}
+  .rules h3 small{font-weight:500;color:#94a3b8;font-size:12px}
+  .rule-box{background:#1d2940;border-radius:10px;padding:16px}
+  .rule-box .rt{font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#aab6c8;margin-bottom:12px}
+  .rule-line{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px;font-size:13.5px}
+  .rule-line .v{font-weight:800;margin-left:auto;margin-right:12px}
+  .legend{font-size:11.5px;color:#94a3b8;margin-top:14px}
+
+  .why{border-radius:10px;padding:16px 18px;font-size:12.8px;line-height:1.65}
+  .why b{font-weight:700}
+  .why .t{font-weight:800;font-size:13.5px;margin-bottom:7px}
+  .why.y{background:#fdf6e3;border-left:4px solid var(--amber);color:#7c5a10}
+  .why.b{background:#eaf1fe;border-left:4px solid #3b82f6;color:#1e429f}
+  .why.r{background:#fdeaee;border-left:4px solid #e11d48;color:#9f1239}
+
+  .ingresa{background:linear-gradient(120deg,#0f5132,#17724a);border-radius:14px;padding:22px 26px;margin-top:18px;color:#fff}
+  .ingresa h3{font-size:13px;letter-spacing:1px;text-transform:uppercase;margin-bottom:16px}
+  .in-card{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.15);border-radius:12px;padding:18px;text-align:center}
+  .in-card .v{font-size:28px;font-weight:800;margin:6px 0}
+  .in-card .s{font-size:12px;opacity:.85}
+
+  /* PROYECCION */
+  .funnel{background:var(--green-light);border-radius:12px;padding:18px;display:flex;justify-content:space-around;text-align:center;flex-wrap:wrap;gap:12px;margin:18px 0}
+  .funnel .f .lbl{font-size:12.5px;font-weight:600;color:#374151}
+  .funnel .f .num{font-size:30px;font-weight:800}
+  .formula{background:rgba(255,255,255,.14);border-radius:8px;padding:10px 16px;font-size:12.5px;margin-top:14px}
+  .dropi-impact{background:linear-gradient(120deg,#1e3a8a,#2f52c9);border-radius:14px;padding:20px 26px;color:#fff;display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin:18px 0}
+  .dropi-impact .txt{flex:1;min-width:220px}
+  .dropi-impact .txt .t{font-weight:800;font-size:15px}
+  .dropi-impact .txt .s{font-size:12.5px;opacity:.8;margin-top:3px}
+  .imp-box{background:rgba(255,255,255,.14);border-radius:10px;padding:10px 16px;text-align:center;min-width:120px}
+  .imp-box .l{font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;opacity:.85}
+  .imp-box .v{font-size:20px;font-weight:800}
+  .imp-box.hl{background:rgba(255,255,255,.25)}
+  .imp-box.hl .v{color:#ffd54a}
+  .dist-warn{color:var(--red);font-size:12.5px;font-weight:700;margin-top:8px;display:none}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="wrap hero-inner">
+    <div class="hero-img">📦</div>
+    <div>
+      <div class="tag">Producto</div>
+      <h1 contenteditable="true" spellcheck="false" data-placeholder="Nombre del producto"></h1>
+      <div class="desc" contenteditable="true" spellcheck="false" data-placeholder="Descripción corta o propuesta de valor..."></div>
+      <div class="credit">Calculadora Comunidad Elite · Juan Acevedo</div>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- CONFIGURACION GLOBAL -->
+  <div class="card">
+    <div class="sec-title">⚙️ Configuración Global</div>
+    <div class="infobox">
+      <b>📊 Modelo de Costos:</b><br>
+      • <b>CPA Fijo</b> = valor fijo que pagas por cada venta generada en Facebook<br>
+      • <b>Costos Dev</b> = sobrecosto del FLETE por entregas fallidas (devoluciones)
+    </div>
+    <div class="grid g4">
+      <div class="field">
+        <label>Costos operativos por entrega (COP)</label>
+        <input type="number" id="ops" value="" placeholder="0">
+        <div class="hint">Costos por cada pedido entregado exitosamente</div>
+      </div>
+      <div class="field">
+        <label>CPA Fijo (COP)</label>
+        <input type="number" id="cpa" value="" placeholder="0">
+        <div class="hint">Costo por adquisición que pagas a Facebook</div>
+      </div>
+      <div class="field">
+        <label>Tasa de despacho (%)</label>
+        <input type="number" id="tDesp" value="" placeholder="0">
+        <div class="hint">Ventas que sí despachas (ej: 100 de 143)</div>
+      </div>
+      <div class="field">
+        <label>Tasa de entrega exitosa (%)</label>
+        <input type="number" id="tEnt" value="" placeholder="0">
+        <div class="hint">Sin devoluciones (ej: 80 de 100)</div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- COSTOS BASE -->
+    <div class="sec-title">🏭 Costos Base por Unidad</div>
+    <div class="grid g3">
+      <div class="field">
+        <label>💲 Precio unitario proveedor (COP)</label>
+        <input type="number" id="pProv" value="" placeholder="0">
+        <div class="hint">Se multiplica × cantidad de cada oferta</div>
+      </div>
+      <div class="minibox">
+        <div class="t">📦 Costo total por oferta:</div>
+        <span id="costoPorOferta"></span>
+      </div>
+      <div class="field">
+        <label>🚚 Flete por envío (COP)</label>
+        <input type="number" id="flete" value="" placeholder="0">
+        <div class="hint">Valor fijo de envío aplicado a todas las ofertas</div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- DROPICARD -->
+    <div class="sec-title">💳 ¿Pagas la pauta con Dropicard?</div>
+    <div class="toggle-row">
+      <div class="toggle-card" id="dropiToggle">
+        <div class="switch on" id="dropiSwitch"></div>
+        <div><b>Uso Dropicard</b><br><small style="color:var(--muted)">Tarjeta de crédito de Dropi</small></div>
+      </div>
+      <div class="dropi-cards" id="dropiCards">
+        <div class="dcard blue">
+          <div class="lbl">📅 Costo mensual fijo</div>
+          <div class="val" id="dropiFijoView">$12.000</div>
+          <div class="sub">Membresía mensual Dropicard</div>
+        </div>
+        <div class="dcard blue">
+          <div class="lbl">📊 Comisión sobre pauta</div>
+          <div class="val">1%</div>
+          <div class="sub">Sobre el total invertido en ads</div>
+        </div>
+        <div class="dcard green">
+          <div class="lbl">💸 Costo total Dropicard</div>
+          <div class="val" id="dropiTotal">$27.000</div>
+          <div class="sub" id="dropiDetail"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- UPSELLS -->
+  <details class="section">
+    <summary>🎁 Upsells <span class="sub">— productos adicionales que el cliente paga</span></summary>
+    <div class="body">
+      <div class="item-row" style="margin-bottom:4px">
+        <span class="col-lbl">Nombre</span><span class="col-lbl">Precio venta (COP)</span>
+        <span class="col-lbl">Costo (COP)</span><span class="col-lbl">% entregas que lo toman</span><span></span>
+      </div>
+      <div id="upsellList"></div>
+      <button class="add-btn" onclick="addUpsell()">+ Agregar upsell</button>
+    </div>
+  </details>
+
+  <!-- OBSEQUIOS -->
+  <details class="section">
+    <summary>🎀 Obsequios / Regalos <span class="sub">— regalos incluidos que tú asumes</span></summary>
+    <div class="body">
+      <div class="item-row obsequio" style="margin-bottom:4px">
+        <span class="col-lbl">Nombre</span><span class="col-lbl">Costo por entrega (COP)</span><span></span>
+      </div>
+      <div id="obsequioList"></div>
+      <button class="add-btn" onclick="addObsequio()">+ Agregar obsequio</button>
+    </div>
+  </details>
+
+  <!-- ANALISIS OFERTAS -->
+  <div class="card">
+    <div class="sec-title">📦 Análisis de tus Ofertas</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th>Nombre oferta</th><th>Cantidad</th><th>PVP</th><th>Precio proveedor</th><th>Flete</th>
+          <th>CPA estimado</th><th>CPA real</th><th>Costos dev</th><th>Total costos</th><th>Rentabilidad</th><th>% Rent</th>
+        </tr></thead>
+        <tbody id="ofertasBody"></tbody>
+      </table>
+    </div>
+    <div class="health" id="healthMsg"></div>
+  </div>
+
+  <!-- RESUMEN COMPARATIVO -->
+  <div class="card">
+    <div class="sec-title">📊 Resumen Comparativo</div>
+    <div class="grid g3" id="kpis"></div>
+    <div class="grid g3" style="margin-top:18px" id="offerCards"></div>
+
+    <div class="rules">
+      <h3>📐 Reglas Financieras Saludables <small>— por oferta</small></h3>
+      <div class="grid g3" id="rulesGrid"></div>
+      <div class="legend">✅ Cumple la regla &nbsp;|&nbsp; ⚠️ Límite cerca &nbsp;|&nbsp; 🔴 Supera el límite recomendado</div>
+    </div>
+
+    <div class="grid g3" style="margin-top:18px">
+      <div class="why y">
+        <div class="t">🏭 ¿Por qué el producto no debe superar el 33%?</div>
+        En ecommerce COD (pago contra entrega), no todas las órdenes se entregan. Si tu producto cuesta más del 33% del PVP,
+        los fletes de devolución y la pauta publicitaria te dejan sin margen real. <b>Un producto que vale menos te da más
+        espacio para absorber los costos del negocio.</b>
+      </div>
+      <div class="why b">
+        <div class="t">🚚 ¿Por qué el flete no debe superar el 16%?</div>
+        El flete se paga tanto en entregas exitosas como en devoluciones. Si supera el 16% del PVP, las órdenes no entregadas
+        se convierten en pérdida pura. <b>Un flete controlado protege tu operación cuando la tasa de entrega baja.</b>
+      </div>
+      <div class="why r">
+        <div class="t">📣 ¿Por qué la pauta no debe superar el 45% del ingreso Dropi?</div>
+        Lo que ingresa a tu wallet de Dropi (PVP − Producto − Flete) es tu margen bruto real. La pauta se paga sobre
+        <i>todas</i> las ventas generadas, no solo las entregadas. Si la pauta consume más del 45% de ese margen,
+        <b>no queda suficiente para cubrir operativos, devoluciones y tu utilidad.</b>
+      </div>
+    </div>
+
+    <div class="ingresa">
+      <h3>💵 Lo que te ingresa a Dropi por oferta</h3>
+      <div class="grid g3" id="ingresaCards"></div>
+    </div>
+  </div>
+
+  <!-- PROYECCION -->
+  <div class="card">
+    <div class="sec-title">🎯 Proyección de Ventas</div>
+    <div class="field" style="max-width:320px">
+      <label>¿Cuántas ventas quieres hacer?</label>
+      <input type="number" id="ventas" value="" placeholder="0">
+      <div class="hint">Total de ventas generadas en Facebook</div>
+    </div>
+    <div class="funnel">
+      <div class="f"><div class="lbl">📱 Ventas Generadas</div><div class="num" id="fVentas">0</div></div>
+      <div class="f"><div class="lbl">📦 Despachadas</div><div class="num" id="fDesp">0</div></div>
+      <div class="f"><div class="lbl">✅ Entregadas</div><div class="num" style="color:var(--ok)" id="fEnt">0</div></div>
+    </div>
+
+    <div class="sec-title" style="font-size:14px">📊 Distribución por Ofertas</div>
+    <div class="grid g3">
+      <div class="field"><label id="dl0">% Oferta 1</label><input type="number" id="dist0" value="0"><div class="hint" id="dh0"></div></div>
+      <div class="field"><label id="dl1">% Oferta 2</label><input type="number" id="dist1" value="0"><div class="hint" id="dh1"></div></div>
+      <div class="field"><label id="dl2">% Oferta 3</label><input type="number" id="dist2" value="0"><div class="hint" id="dh2"></div></div>
+    </div>
+    <div class="dist-warn" id="distWarn">⚠️ La distribución no suma 100%</div>
+
+    <div class="tbl-wrap" style="margin-top:18px">
+      <table>
+        <thead><tr>
+          <th>Oferta</th><th>Ventas</th><th>Despachos</th><th>Entregas exitosas</th>
+          <th>Facturación entregada</th><th>Costos totales</th><th>Rentabilidad</th><th>% Rentabilidad</th>
+        </tr></thead>
+        <tbody id="proyBody"></tbody>
+        <tfoot><tr id="proyFoot"></tr></tfoot>
+      </table>
+    </div>
+
+    <div class="sec-title" style="font-size:14px;margin-top:24px">💰 Desglose Detallado de Costos</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th>Oferta</th><th>Costo producto</th><th>Costo flete</th><th>Costo CPA (publicidad)</th>
+          <th>Costos operativos</th><th>Total costos</th>
+        </tr></thead>
+        <tbody id="descBody"></tbody>
+        <tfoot><tr id="descFoot"></tr></tfoot>
+      </table>
+    </div>
+
+    <div class="ingresa" style="margin-top:24px">
+      <h3>💵 Ingreso Real a Dropi</h3>
+      <div class="grid g2">
+        <div class="in-card" style="text-align:left">
+          <div class="s">✅ Facturación Entregada</div><div class="v" id="irFact"></div><div class="s" id="irFactSub"></div>
+          <div style="height:10px"></div>
+          <div class="s">🚚 Costo Total Flete</div><div class="v" id="irFlete"></div><div class="s" id="irFleteSub"></div>
+        </div>
+        <div class="in-card" style="text-align:left">
+          <div class="s">🏭 Costo Total Producto</div><div class="v" id="irProd"></div><div class="s">Pagado al proveedor</div>
+          <div style="height:10px"></div>
+          <div style="background:rgba(255,255,255,.15);border-radius:10px;padding:12px 16px">
+            <div class="s">💰 INGRESO NETO A DROPI</div>
+            <div class="v" id="irNeto" style="font-size:30px"></div>
+            <div class="s">Lo que realmente ingresa</div>
+          </div>
+        </div>
+      </div>
+      <div class="formula">💡 <b>Fórmula:</b> Ingreso Dropi = Facturación Entregada − Producto − Flete − Costo Upsell − Costo Obsequio</div>
+    </div>
+
+    <div class="dropi-impact" id="dropiImpact">
+      <div class="txt">
+        <div class="t">💳 Costo Dropicard en esta proyección</div>
+        <div class="s">Se descuenta de tu rentabilidad proyectada</div>
+      </div>
+      <div class="imp-box"><div class="l">Mensualidad</div><div class="v" id="impFijo"></div></div>
+      <div class="imp-box"><div class="l" id="impPctLbl">1% sobre pauta</div><div class="v" id="impCom"></div></div>
+      <div class="imp-box hl"><div class="l">Total impacto</div><div class="v" id="impTotal"></div></div>
+    </div>
+
+    <div class="grid g3">
+      <div class="kpi"><div class="lbl">Rentabilidad total proyectada</div><div class="val" id="kRent"></div><div class="sub" id="kRentSub"></div></div>
+      <div class="kpi"><div class="lbl">Inversión en publicidad (CPA)</div><div class="val" id="kCpa"></div><div class="sub">Total pagado a Facebook</div></div>
+      <div class="kpi"><div class="lbl">Costos operativos totales</div><div class="val" id="kOps"></div><div class="sub">Recaudado por entregas</div></div>
+      <div class="kpi"><div class="lbl">ROI proyectado</div><div class="val" id="kRoi"></div><div class="sub">Retorno sobre inversión</div></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ---------- Estado ----------
+const ofertas = [
+  {nombre:'', cant:0, pvp:0},
+  {nombre:'', cant:0, pvp:0},
+  {nombre:'', cant:0, pvp:0},
+];
+let dropiOn = true;
+let upsells = [];   // {nombre, precio, costo, toma}
+let obsequios = []; // {nombre, costo}
+
+const $ = id => document.getElementById(id);
+const fmt = n => '$' + Math.round(n).toLocaleString('es-CO');
+const pct1 = n => (n*100).toFixed(1) + '%';
+const num = id => parseFloat($(id).value) || 0;
+
+// ---------- Render de filas editables (ofertas) ----------
+function buildOfertaRows(){
+  $('ofertasBody').innerHTML = ofertas.map((o,i)=>`
+    <tr>
+      <td><input class="name" data-i="${i}" data-k="nombre" value="${o.nombre}" placeholder="Oferta ${i+1}"></td>
+      <td><input type="number" data-i="${i}" data-k="cant" value="${o.cant}" style="width:60px"></td>
+      <td><input type="number" data-i="${i}" data-k="pvp" value="${o.pvp}"></td>
+      <td id="c-prov-${i}"></td><td id="c-flete-${i}"></td><td class="bold" id="c-cpae-${i}"></td>
+      <td class="bold" id="c-cpar-${i}"></td><td id="c-dev-${i}"></td><td id="c-tot-${i}"></td>
+      <td id="c-rent-${i}"></td><td id="c-prent-${i}"></td>
+    </tr>`).join('');
+  $('ofertasBody').querySelectorAll('input').forEach(inp=>{
+    inp.addEventListener('input',()=>{
+      const o = ofertas[+inp.dataset.i];
+      o[inp.dataset.k] = inp.dataset.k==='nombre' ? inp.value : (parseFloat(inp.value)||0);
+      recalc();
+    });
+  });
+}
+
+// ---------- Upsells / Obsequios ----------
+function addUpsell(){ upsells.push({nombre:'Upsell', precio:0, costo:0, toma:0}); buildUpsells(); recalc(); }
+function addObsequio(){ obsequios.push({nombre:'Obsequio', costo:0}); buildObsequios(); recalc(); }
+function buildUpsells(){
+  $('upsellList').innerHTML = upsells.map((u,i)=>`
+    <div class="item-row">
+      <input data-i="${i}" data-k="nombre" value="${u.nombre}">
+      <input type="number" data-i="${i}" data-k="precio" value="${u.precio}">
+      <input type="number" data-i="${i}" data-k="costo" value="${u.costo}">
+      <input type="number" data-i="${i}" data-k="toma" value="${u.toma}">
+      <button class="del" onclick="upsells.splice(${i},1);buildUpsells();recalc()">✕</button>
+    </div>`).join('');
+  $('upsellList').querySelectorAll('input').forEach(inp=>inp.addEventListener('input',()=>{
+    const u = upsells[+inp.dataset.i];
+    u[inp.dataset.k] = inp.dataset.k==='nombre' ? inp.value : (parseFloat(inp.value)||0);
+    recalc();
+  }));
+}
+function buildObsequios(){
+  $('obsequioList').innerHTML = obsequios.map((g,i)=>`
+    <div class="item-row obsequio">
+      <input data-i="${i}" data-k="nombre" value="${g.nombre}">
+      <input type="number" data-i="${i}" data-k="costo" value="${g.costo}">
+      <button class="del" onclick="obsequios.splice(${i},1);buildObsequios();recalc()">✕</button>
+    </div>`).join('');
+  $('obsequioList').querySelectorAll('input').forEach(inp=>inp.addEventListener('input',()=>{
+    const g = obsequios[+inp.dataset.i];
+    g[inp.dataset.k] = inp.dataset.k==='nombre' ? inp.value : (parseFloat(inp.value)||0);
+    recalc();
+  }));
+}
+
+// ---------- Cálculo principal ----------
+function recalc(){
+  const ops = num('ops'), cpa = num('cpa'),
+        tD = num('tDesp')/100, tE = num('tEnt')/100,
+        pProv = num('pProv'), flete = num('flete');
+
+  // Costo por oferta (info)
+  $('costoPorOferta').innerHTML = ofertas.map((o,i)=>`Oferta ${i+1}: <b>${fmt(pProv*o.cant)}</b>`).join(' &nbsp;|&nbsp; ');
+
+  // ----- Análisis por oferta -----
+  const cpaReal = tD>0 ? cpa/tD : 0;
+  const costosDev = tE>0 ? flete*(1-tE)/tE : 0;
+  const res = ofertas.map(o=>{
+    const prod = pProv*o.cant;
+    const total = prod + flete + cpa + costosDev + ops;
+    const rent = o.pvp - total;
+    const ingresaDropi = o.pvp - prod - flete;
+    return {prod, total, rent, prent: o.pvp>0 ? rent/o.pvp : 0,
+            ingresaDropi,
+            prodPct: o.pvp>0 ? prod/o.pvp : 0,
+            fletePct: o.pvp>0 ? flete/o.pvp : 0,
+            pautaPct: ingresaDropi>0 ? cpa/ingresaDropi : 0};
+  });
+
+  res.forEach((r,i)=>{
+    $(`c-prov-${i}`).textContent = fmt(r.prod);
+    $(`c-flete-${i}`).textContent = fmt(flete);
+    $(`c-cpae-${i}`).textContent = fmt(cpa);
+    $(`c-cpar-${i}`).textContent = fmt(cpaReal);
+    $(`c-dev-${i}`).textContent = fmt(costosDev);
+    $(`c-tot-${i}`).textContent = fmt(r.total);
+    $(`c-rent-${i}`).innerHTML = `<span class="${r.rent>=0?'pos':'neg'}">${fmt(r.rent)}</span>`;
+    const cls = r.prent>=0.20 ? 'pos' : r.prent>=0.15 ? 'warn-c' : 'neg';
+    $(`c-prent-${i}`).innerHTML = `<span class="${cls}">${pct1(r.prent)}</span>`;
+  });
+
+  // Salud del portafolio
+  const sanas = res.filter(r=>r.prent>0.15).length;
+  const h = $('healthMsg');
+  if(sanas===res.length){ h.className='health'; h.innerHTML='✅ <b>Portafolio saludable:</b> Las '+res.length+' ofertas tienen márgenes adecuados (&gt;15%).'; }
+  else if(sanas>0){ h.className='health mid'; h.innerHTML='⚠️ <b>Atención:</b> Solo '+sanas+' de '+res.length+' ofertas superan el 15% de margen.'; }
+  else { h.className='health bad'; h.innerHTML='🔴 <b>Portafolio en riesgo:</b> Ninguna oferta alcanza el 15% de margen recomendado.'; }
+
+  // ----- KPIs resumen -----
+  const best = res.reduce((a,r,i)=> r.prent>res[a].prent ? i : a, 0);
+  const margenProm = res.reduce((s,r)=>s+r.prent,0)/res.length;
+  const tasaExito = tD*tE;
+  $('kpis').innerHTML = `
+    <div class="kpi"><div class="lbl">Oferta más rentable</div><div class="val">${ofertas[best].nombre}</div><div class="sub">${pct1(res[best].prent)} margen</div></div>
+    <div class="kpi"><div class="lbl">Margen promedio</div><div class="val">${pct1(margenProm)}</div><div class="sub">De las ${res.length} ofertas</div></div>
+    <div class="kpi"><div class="lbl">Tasa éxito total</div><div class="val">${pct1(tasaExito)}</div><div class="sub">Despacho × Entrega</div></div>`;
+
+  // Cards por oferta (barras)
+  const bar = (p,color)=>`<div class="bar"><i style="width:${Math.min(p*100,100)}%;background:${color}"></i></div>`;
+  $('offerCards').innerHTML = res.map((r,i)=>`
+    <div class="offer-card">
+      <div class="head"><span>📦 ${ofertas[i].nombre}</span><span class="pvp">PVP: ${fmt(ofertas[i].pvp)}</span></div>
+      <div class="brow"><span class="n">🏭 Producto</span>${bar(r.prodPct,'#f59e0b')}<span class="pct" style="color:#d97706">${pct1(r.prodPct)}</span></div>
+      <div class="brow"><span class="n">🚚 Flete</span>${bar(r.fletePct,'#6366f1')}<span class="pct" style="color:#4f46e5">${pct1(r.fletePct)}</span></div>
+      <div class="brow"><span class="n">📣 Pauta (CPA)<small>% sobre lo que ingresa a Dropi</small></span>${bar(r.pautaPct,'#e11d48')}<span class="pct" style="color:#e11d48">${pct1(r.pautaPct)}</span></div>
+      <div class="brow total"><span class="n">💰 Ingresa a Dropi</span>${bar(r.ingresaDropi/ofertas[i].pvp,'#16a34a')}<span class="pct">${pct1(ofertas[i].pvp>0?r.ingresaDropi/ofertas[i].pvp:0)}</span></div>
+    </div>`).join('');
+
+  // Reglas financieras
+  const icon = (v,lim)=> v>lim ? '🔴' : v>=lim-0.02 ? '⚠️' : '✅';
+  const vcls = (v,lim)=> v>lim ? 'style="color:#fb7185"' : v>=lim-0.02 ? 'style="color:#fbbf24"' : 'style="color:#4ade80"';
+  const ruleBox = (title,get,lim)=>`
+    <div class="rule-box"><div class="rt">${title}</div>
+      ${res.map((r,i)=>`<div class="rule-line"><span>${ofertas[i].nombre}</span><span class="v" ${vcls(get(r),lim)}>${pct1(get(r))}</span><span>${icon(get(r),lim)}</span></div>`).join('')}
+    </div>`;
+  $('rulesGrid').innerHTML =
+    ruleBox('🏭 Producto ≤ 33% del PVP', r=>r.prodPct, 0.33) +
+    ruleBox('🚚 Flete ≤ 16% del PVP', r=>r.fletePct, 0.16) +
+    ruleBox('📣 Pauta ≤ 45% del ingreso Dropi', r=>r.pautaPct, 0.45);
+
+  // Ingresa a Dropi
+  $('ingresaCards').innerHTML = res.map((r,i)=>`
+    <div class="in-card">
+      <div class="s">En tu <b>${ofertas[i].nombre}</b> te ingresa</div>
+      <div class="v">${fmt(r.ingresaDropi)}</div>
+      <div class="s">${pct1(ofertas[i].pvp>0?r.ingresaDropi/ofertas[i].pvp:0)} sobre PVP<br>por orden entregada</div>
+    </div>`).join('');
+
+  // ----- Proyección -----
+  const ventasTot = num('ventas');
+  const dists = [num('dist0'), num('dist1'), num('dist2')];
+  const sumD = dists.reduce((a,b)=>a+b,0);
+  $('distWarn').style.display = Math.abs(sumD-100)>0.01 ? 'block' : 'none';
+  ofertas.forEach((o,i)=>{ $('dl'+i).textContent = `% Oferta ${i+1}` + (o.nombre ? ` (${o.nombre})` : ''); });
+
+  let T = {v:0,d:0,e:0,fact:0,prod:0,flete:0,cpa:0,ops:0,tot:0,rent:0};
+  const proys = ofertas.map((o,i)=>{
+    const v = Math.round(ventasTot*dists[i]/100);
+    $('dh'+i).textContent = v + ' ventas';
+    const d = Math.round(v*tD), e = Math.round(d*tE);
+    const fact = e*o.pvp, cProd = e*pProv*o.cant, cFlete = d*flete, cCpa = v*cpa, cOps = e*ops;
+    const tot = cProd+cFlete+cCpa+cOps, rent = fact-tot;
+    T.v+=v; T.d+=d; T.e+=e; T.fact+=fact; T.prod+=cProd; T.flete+=cFlete; T.cpa+=cCpa; T.ops+=cOps; T.tot+=tot; T.rent+=rent;
+    return {v,d,e,fact,cProd,cFlete,cCpa,cOps,tot,rent};
+  });
+
+  $('fVentas').textContent = T.v; $('fDesp').textContent = T.d; $('fEnt').textContent = T.e;
+
+  $('proyBody').innerHTML = proys.map((p,i)=>`
+    <tr><td class="bold">${ofertas[i].nombre}</td><td>${p.v}</td><td>${p.d}</td><td>${p.e}</td>
+    <td>${fmt(p.fact)}</td><td class="neg">${fmt(p.tot)}</td>
+    <td class="${p.rent>=0?'pos':'neg'}">${fmt(p.rent)}</td>
+    <td>${p.fact>0?pct1(p.rent/p.fact):'—'}</td></tr>`).join('');
+  $('proyFoot').innerHTML = `<td>TOTAL</td><td>${T.v}</td><td>${T.d}</td><td>${T.e}</td>
+    <td>${fmt(T.fact)}</td><td class="neg">${fmt(T.tot)}</td>
+    <td class="${T.rent>=0?'pos':'neg'}">${fmt(T.rent)}</td><td>${T.fact>0?pct1(T.rent/T.fact):'—'}</td>`;
+
+  $('descBody').innerHTML = proys.map((p,i)=>`
+    <tr><td class="bold">${ofertas[i].nombre}</td><td>${fmt(p.cProd)}</td><td>${fmt(p.cFlete)}</td>
+    <td>${fmt(p.cCpa)}</td><td>${fmt(p.cOps)}</td><td class="neg">${fmt(p.tot)}</td></tr>`).join('');
+  $('descFoot').innerHTML = `<td>TOTAL</td><td>${fmt(T.prod)}</td><td>${fmt(T.flete)}</td>
+    <td>${fmt(T.cpa)}</td><td>${fmt(T.ops)}</td><td class="neg">${fmt(T.tot)}</td>`;
+
+  // Upsells y obsequios en la proyección (sobre entregas exitosas)
+  const upsellIngreso = upsells.reduce((s,u)=> s + T.e*(u.toma/100)*u.precio, 0);
+  const upsellCosto  = upsells.reduce((s,u)=> s + T.e*(u.toma/100)*u.costo, 0);
+  const obsequioCosto = obsequios.reduce((s,g)=> s + T.e*g.costo, 0);
+
+  // Ingreso real a Dropi
+  const ingresoDropi = T.fact + upsellIngreso - T.prod - T.flete - upsellCosto - obsequioCosto;
+  $('irFact').textContent = fmt(T.fact + upsellIngreso);
+  $('irFactSub').textContent = T.e + ' pedidos entregados' + (upsellIngreso>0 ? ' (incluye upsells)' : '');
+  $('irProd').textContent = fmt(T.prod);
+  $('irFlete').textContent = fmt(T.flete);
+  $('irFleteSub').textContent = T.d + ' despachos pagados';
+  $('irNeto').textContent = fmt(ingresoDropi);
+
+  // Dropicard (valores fijos, no editables; el toggle activa/desactiva)
+  const dFijo = 12000, dPct = 0.01;
+  const dCom = T.cpa*dPct;
+  const dTot = dropiOn ? dFijo + dCom : 0;
+  $('dropiTotal').textContent = fmt(dFijo + dCom);
+  $('dropiDetail').textContent = `${fmt(dFijo)} fijo + ${fmt(dCom)} comisión (1%)`;
+  $('dropiCards').style.display = dropiOn ? 'flex' : 'none';
+  $('dropiImpact').style.display = dropiOn ? 'flex' : 'none';
+  $('impFijo').textContent = fmt(dFijo);
+  $('impCom').textContent = fmt(dCom);
+  $('impPctLbl').textContent = '1% sobre pauta';
+  $('impTotal').textContent = fmt(dTot);
+
+  // KPIs finales
+  const rentFinal = T.rent + upsellIngreso - upsellCosto - obsequioCosto - dTot;
+  $('kRent').textContent = fmt(rentFinal);
+  $('kRentSub').textContent = (T.fact>0 ? pct1(rentFinal/(T.fact+upsellIngreso)) : '—') + ' margen';
+  $('kCpa').textContent = fmt(T.cpa);
+  $('kOps').textContent = fmt(T.ops);
+  $('kRoi').textContent = T.cpa>0 ? pct1(rentFinal/T.cpa) : '—';
+}
+
+// ---------- Init ----------
+$('dropiToggle').addEventListener('click', ()=>{
+  dropiOn = !dropiOn;
+  $('dropiSwitch').classList.toggle('on', dropiOn);
+  recalc();
+});
+['ops','cpa','tDesp','tEnt','pProv','flete','ventas','dist0','dist1','dist2']
+  .forEach(id=>$(id).addEventListener('input', recalc));
+buildOfertaRows();
+recalc();
+</script>
+</body>
+</html>
