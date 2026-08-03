@@ -152,7 +152,23 @@
   .imp-box.hl{background:rgba(255,255,255,.25)}
   .imp-box.hl .v{color:#ffd54a}
   .dist-warn{color:var(--red);font-size:12.5px;font-weight:700;margin-top:8px;display:none}
+
+  /* BOTON PDF */
+  .pdf-btn{position:fixed;bottom:24px;right:24px;z-index:99;background:linear-gradient(120deg,#1a5632,#2e7d4f);
+    color:#fff;border:none;border-radius:50px;padding:14px 24px;font-size:15px;font-weight:800;cursor:pointer;
+    box-shadow:0 4px 14px rgba(13,40,24,.4);display:flex;align-items:center;gap:8px}
+  .pdf-btn:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(13,40,24,.5)}
+  .pdf-btn:disabled{opacity:.6;cursor:wait;transform:none}
+
+  @media print{
+    .pdf-btn,.add-btn,.del,.dist-warn{display:none !important}
+    body{background:#fff}
+    .card,details.section{box-shadow:none;border:1px solid var(--border);page-break-inside:avoid}
+    .hero{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
 
@@ -415,6 +431,8 @@
 
 </div>
 
+<button class="pdf-btn" id="pdfBtn" onclick="descargarPDF()">📄 Descargar PDF</button>
+
 <script>
 // ---------- Estado ----------
 const ofertas = [
@@ -635,6 +653,28 @@ function recalc(){
   $('kCpa').textContent = fmt(T.cpa);
   $('kOps').textContent = fmt(T.ops);
   $('kRoi').textContent = T.cpa>0 ? pct1(rentFinal/T.cpa) : '—';
+}
+
+// ---------- Descargar PDF ----------
+function descargarPDF(){
+  // Abrir las secciones colapsables para que salgan en el PDF
+  document.querySelectorAll('details.section').forEach(d=>d.open=true);
+  const nombre = (document.querySelector('.hero h1').textContent.trim() || 'producto')
+    .replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ ]/g,'').replace(/\s+/g,'_');
+  if (typeof html2pdf === 'undefined'){ window.print(); return; }
+  const btn = $('pdfBtn');
+  btn.disabled = true; btn.textContent = '⏳ Generando PDF...';
+  const opt = {
+    margin: 4,
+    filename: 'Costeo_' + nombre + '.pdf',
+    image: {type:'jpeg', quality:0.95},
+    html2canvas: {scale:2, useCORS:true, ignoreElements: el => el.id==='pdfBtn'},
+    jsPDF: {unit:'mm', format:'a4', orientation:'portrait'},
+    pagebreak: {mode:['css','legacy']}
+  };
+  html2pdf().set(opt).from(document.body).save()
+    .catch(()=>window.print())
+    .finally(()=>{ btn.disabled=false; btn.innerHTML='📄 Descargar PDF'; });
 }
 
 // ---------- Init ----------
