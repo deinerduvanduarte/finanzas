@@ -583,7 +583,7 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
       <div class="dropi-header">
         <div>
           <div class="dropi-title">📡 Meta Ads · Datos automáticos</div>
-          <div class="dropi-sub">Gasto y leads sincronizados cada 15 min desde Meta API</div>
+          <div class="dropi-sub">Gasto y leads sincronizados desde Meta API</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px">
           <span class="dropi-badge" id="meta-upd">Cargando…</span>
@@ -1184,7 +1184,6 @@ async function recargar(){
     }
     renderAll();
     setLabel();
-    // Meta cada minuto: EN VIVO si hay token; si no, el JSON del sync de GitHub
     if(localStorage.getItem(LMT)) fetchMetaLive(false); else loadMetaData(false);
     const t=new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
     document.getElementById('upd-txt').textContent='Act. '+t;
@@ -1211,7 +1210,7 @@ function mostrarDash(){
   syncDP();renderAll();startAuto();
   renderDropiHistorico(null); // mostrar estado vacío hasta que se suba Excel
   updateSoundBtn(); // pintar el estado del botón 🔔 según localStorage
-  loadMetaData(false).then(()=>fetchMetaLive(false)); // cargar Meta: histórico + en vivo si hay token
+  loadMetaData(false).then(()=>fetchMetaLive(false)); // Meta: histórico + en vivo si hay token
 }
 function volverSetup(){clearInterval(autoT);clearInterval(cntT);document.getElementById('main').style.display='none';document.getElementById('setup-screen').style.display='flex';}
 function showErr(m){const e=document.getElementById('setup-err');e.textContent=m;e.style.display=m?'block':'none';}
@@ -2273,7 +2272,7 @@ function resetDropi(){
 }
 
 // ─────────────────────────────────────────────
-// META ADS · DATOS AUTOMÁTICOS (meta_data.json vía GitHub Actions)
+// META ADS · DATOS AUTOMÁTICOS (meta_data.json + modo EN VIVO)
 // ─────────────────────────────────────────────
 let metaData = null;
 
@@ -2305,7 +2304,7 @@ async function loadMetaData(showT){
 const META_JARGON = /^(NEXORA|CBO|ABO|ADS\b.*|POSD.*|VIDEO|VID\b.*|IMG.*|IMAGEN|TRAFICO|TEST.*|ESCALA.*|GANADOR(ES)?\b.*|.*\bGANADOR(ES)?)$/;
 function metaProductFromCampaign(name){
   const parts = String(name||'').split('|')
-    .map(s=>s.trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''))
+    .map(s=>s.trim().toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g,''))
     .filter(Boolean);
   for(let i=1;i<parts.length;i++){
     const p = parts[i];
@@ -2318,13 +2317,13 @@ function metaProductFromCampaign(name){
 
 const fMeta = n => '$' + Math.round(n).toLocaleString('es-CO');
 
-// ── MODO EN VIVO: llama a Meta API directo desde el navegador (cada minuto) ──
+// ── MODO EN VIVO ──
 const LMT = 'vd_meta_token';
 const META_ACCOUNTS = ['act_2235837880587647','act_763369709939342'];
 
 function configMetaToken(){
   const cur = localStorage.getItem(LMT)||'';
-  const t = prompt('🔑 Pega tu Meta Access Token para actualización EN VIVO cada minuto.\n\nSolo se guarda en ESTE navegador (no se sube a ningún lado).\nDeja vacío y acepta para borrarlo.', cur);
+  const t = prompt('🔑 Pega tu Meta Access Token para actualización EN VIVO cada minuto.\n\nSolo se guarda en ESTE navegador.\nDeja vacío y acepta para borrarlo.', cur);
   if(t === null) return;
   if(t.trim()){
     localStorage.setItem(LMT, t.trim());
@@ -2351,7 +2350,7 @@ function metaLeadsFromActions(actions){
 async function fetchMetaLive(showT){
   const tk = localStorage.getItem(LMT);
   if(!tk) return false;
-  if(!metaData) await loadMetaData(false); // asegura el histórico de 30 días
+  if(!metaData) await loadMetaData(false);
   const today = ymd(new Date());
   try{
     const all = [];
@@ -2369,7 +2368,7 @@ async function fetchMetaLive(showT){
       }));
     }
 
-    // Presupuestos del día: campañas (CBO) + conjuntos (ABO)
+    // Presupuestos: campañas (CBO) + conjuntos (ABO)
     const budgets = [];
     for(const acc of META_ACCOUNTS){
       try{
@@ -2438,11 +2437,11 @@ function renderMeta(){
   const ps = Object.entries(prods).sort((a,b)=>b[1].inv-a[1].inv);
   const maxInv = ps.length ? ps[0][1].inv : 1;
 
-  // TODAS las campañas de hoy (lista con scroll)
+  // TODAS las campañas de hoy (con scroll)
   const camps = (t.campaigns||[]).slice().sort((a,b)=>b.spend-a.spend);
   const maxCamp = camps.length ? Math.max(camps[0].spend,1) : 1;
 
-  // ── Gasto por cuenta (BM) · período seleccionado ──
+  // Gasto por cuenta
   const accAgg = {};
   rows.forEach(r=>{ if(!accAgg[r.a]) accAgg[r.a]={s:0,l:0}; accAgg[r.a].s+=r.s; accAgg[r.a].l+=r.l; });
   const accPal = ['#fbbf24','#34d399','#60a5fa','#a78bfa','#f87171','#f472b6'];
@@ -2460,7 +2459,7 @@ function renderMeta(){
         </div>`).join('')}
     </div>` : '';
 
-  // ── Presupuesto del día por producto ──
+  // Presupuesto del día — SOLO productos con campañas encendidas
   let budgetHtml = '';
   if(Array.isArray(metaData.budgets) && metaData.budgets.length){
     const todayD = (metaData.today && metaData.today.date) || ymd(new Date());
@@ -2470,7 +2469,7 @@ function renderMeta(){
       spentByProd[p] = (spentByProd[p]||0) + r.s;
     });
     const bp = {};
-    metaData.budgets.forEach(b=>{
+    metaData.budgets.filter(b=>b.act>0).forEach(b=>{
       const p = metaProductFromCampaign(b.c);
       if(!bp[p]) bp[p] = {b:0, act:0};
       bp[p].b += b.b; bp[p].act += b.act;
@@ -2478,8 +2477,8 @@ function renderMeta(){
     const totB = Object.values(bp).reduce((s,x)=>s+x.b,0);
     const totS = Object.keys(bp).reduce((s,p)=>s+(spentByProd[p]||0),0);
     const rowsB = Object.entries(bp).sort((a,b)=>b[1].b-a[1].b);
-    budgetHtml = `<div class="dropi-compare" style="margin-top:0;margin-bottom:12px">
-      <div class="dc-title">💰 Presupuesto del día por producto</div>
+    if(rowsB.length) budgetHtml = `<div class="dropi-compare" style="margin-top:0;margin-bottom:12px">
+      <div class="dc-title">💰 Presupuesto del día por producto · solo campañas activas</div>
       ${rowsB.map(([p,x])=>{
         const sp  = spentByProd[p]||0;
         const pct = x.b>0 ? Math.min(100, Math.round(sp/x.b*100)) : 0;
@@ -2489,7 +2488,7 @@ function renderMeta(){
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
               <span style="font-size:.92rem;font-weight:800;color:#f8fafc">${p}</span>
               <span style="font-size:.68rem;font-weight:700;background:rgba(255,255,255,.08);color:rgba(255,255,255,.55);padding:2px 9px;border-radius:20px">${shareB}% del presupuesto</span>
-              <span style="font-size:.68rem;font-weight:700;background:${x.act>0?'rgba(52,211,153,.15)':'rgba(255,255,255,.08)'};color:${x.act>0?'#34d399':'rgba(255,255,255,.45)'};padding:2px 9px;border-radius:20px">${x.act>0?x.act+' activos':'pausado'}</span>
+              <span style="font-size:.68rem;font-weight:700;background:rgba(52,211,153,.15);color:#34d399;padding:2px 9px;border-radius:20px">${x.act} activos</span>
             </div>
             <div style="text-align:right"><span style="font-size:1.05rem;font-weight:800;color:#f8fafc">${fMeta(x.b)}</span> <span style="font-size:.68rem;color:rgba(255,255,255,.4)">presupuesto</span></div>
           </div>
@@ -2517,6 +2516,8 @@ function renderMeta(){
       <div class="dk"><div class="dk-lbl">📉 Costo x Lead</div><div class="dk-val" style="color:#a78bfa">${cpl>0?fMeta(cpl):'—'}</div><div class="dk-sub" style="color:rgba(255,255,255,.5)">promedio período</div></div>
       <div class="dk"><div class="dk-lbl">🏦 Cuentas activas</div><div class="dk-val" style="color:#f8fafc">${nCuentas}</div><div class="dk-sub" style="color:rgba(255,255,255,.5)">hoy: ${fMeta(t.spend||0)} · ${t.leads||0} leads</div></div>
     </div>
+    ${budgetHtml}
+    ${accHtml}
     ${ps.length?`
     <div class="dropi-compare" style="margin-top:0;margin-bottom:12px">
       <div class="dc-title">📦 Gasto por producto · período seleccionado</div>
@@ -2527,8 +2528,6 @@ function renderMeta(){
           <span class="dc-pct" style="color:#c7d2fe;width:auto;min-width:150px">${fMeta(v.inv)} · ${v.leads} leads${v.leads>0?' · CPL '+fMeta(v.inv/v.leads):''}</span>
         </div>`).join('')}
     </div>`:''}
-    ${budgetHtml}
-    ${accHtml}
     ${camps.length?`
     <div class="dropi-compare" style="margin-top:0">
       <div class="dc-title">📣 Campañas de hoy · ${camps.length} en total · desliza para ver todas</div>
@@ -2559,7 +2558,7 @@ function applyMetaAutofill(date, combos){
     metaProd[p].inv += r.s; metaProd[p].leads += r.l;
   });
 
-  const norm = s => String(s||'').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const norm = s => String(s||'').toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
   const matches = {};
   Object.entries(combos).forEach(([key,c])=>{
     const np = norm(c.prod);
