@@ -2416,6 +2416,20 @@ async function fetchMetaLive(showT){
 
     if(!metaData) metaData = {rows:[], daily:[], accounts:[], today:{}};
     metaData.budgets = budgets;
+
+    // Nombres de cuenta y BM (si el JSON no los trajo o les falta el BM)
+    if(!(metaData.accounts||[]).length || !metaData.accounts.some(a=>a.biz)){
+      const accs = [];
+      for(const acc of META_ACCOUNTS){
+        try{
+          const pi = new URLSearchParams({fields:'name,currency,account_status,business', access_token:tk});
+          const ji = await (await fetch('https://graph.facebook.com/v21.0/'+acc+'?'+pi)).json();
+          if(!ji.error) accs.push({id:acc, name:ji.name||acc, currency:ji.currency||'?',
+            status:ji.account_status||0, biz:(ji.business&&ji.business.name)||''});
+        }catch(e){}
+      }
+      if(accs.length) metaData.accounts = accs;
+    }
     metaData.rows  = (metaData.rows||[]).filter(r=>r.d!==today).concat(all);
     const spend = all.reduce((s,r)=>s+r.s,0), leads = all.reduce((s,r)=>s+r.l,0);
     metaData.today = {date:today, spend, leads,
@@ -2644,6 +2658,8 @@ function renderMeta(){
   const stMap = {};
   (metaData.budgets||[]).forEach(b=>{ stMap[String(b.c||'').trim()] = b.act>0; });
   const campOn = nm => stMap[String(nm||'').trim()] === true;
+  const campsShow = camps.filter(c=>c.spend>0 || campOn(c.campaign_name));
+  const maxCampS = campsShow.length ? Math.max(campsShow[0].spend,1) : 1;
   const accHtml = accRows.length ? `
     <div class="dropi-compare" style="margin-top:0;margin-bottom:12px">
       <div class="dc-title">💼 Gasto por cuenta · ${curFrom===curTo?fmtDisp(curFrom):fmtDisp(curFrom)+' – '+fmtDisp(curTo)}</div>
@@ -2724,16 +2740,16 @@ function renderMeta(){
           <span class="dc-pct" style="color:#c7d2fe;width:auto;min-width:150px">${fMeta(v.inv)} · ${v.leads} leads${v.leads>0?' · CPL '+fMeta(v.inv/v.leads):''}</span>
         </div>`).join('')}
     </div>`:''}
-    ${camps.length?`
+    ${campsShow.length?`
     <div class="dropi-compare" style="margin-top:0">
-      <div class="dc-title">📣 Campañas de hoy · ${camps.length} en total · desliza para ver todas</div>
+      <div class="dc-title">📣 Campañas de hoy · ${campsShow.length} con actividad · desliza para ver todas</div>
       <div style="max-height:300px;overflow-y:auto;padding-right:4px">
-      ${camps.map(c=>`
+      ${campsShow.map(c=>`
         <div style="display:grid;grid-template-columns:10px minmax(140px,1.1fr) auto 1fr 125px;align-items:center;gap:8px;padding:3px 0">
           <span style="font-size:.6rem;color:${campOn(c.campaign_name)?'#34d399':'rgba(255,255,255,.25)'}" title="${campOn(c.campaign_name)?'Encendida':'Apagada'}">●</span>
           <span style="font-size:.7rem;font-weight:600;color:rgba(255,255,255,.75);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${c.campaign_name}">${c.campaign_name}</span>
           <span style="font-size:.6rem;font-weight:700;color:rgba(255,255,255,.4);background:rgba(255,255,255,.07);padding:1px 8px;border-radius:12px;white-space:nowrap">${accName(c.account)}${accBiz(c.account)?' · '+accBiz(c.account):''}</span>
-          <div style="height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden"><div style="height:100%;width:${Math.round(c.spend/maxCamp*100)}%;background:#34d399;border-radius:2px"></div></div>
+          <div style="height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden"><div style="height:100%;width:${Math.round(c.spend/maxCampS*100)}%;background:#34d399;border-radius:2px"></div></div>
           <span style="font-size:.7rem;font-weight:800;color:#6ee7b7;text-align:right;white-space:nowrap">${fMeta(c.spend)} · ${c.leads} leads</span>
         </div>`).join('')}
       </div>
