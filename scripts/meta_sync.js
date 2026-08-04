@@ -1,5 +1,5 @@
 /**
- * meta_sync.js — Sincroniza gasto, leads y presupuestos de Meta Ads → meta_data.json
+ * meta_sync.js — Sincroniza gasto, leads, presupuestos y BM de Meta Ads → meta_data.json
  * Corre en GitHub Actions cada 15 min. Token desde META_TOKEN (GitHub Secret).
  */
 
@@ -101,16 +101,22 @@ async function accountBudgets(account) {
   return out;
 }
 
-// Nombre y moneda de la cuenta (informativo)
+// Nombre, moneda y BM de la cuenta
 async function accountInfo(account) {
   try {
-    const params = new URLSearchParams({ fields: 'name,currency,account_status', access_token: TOKEN });
+    const params = new URLSearchParams({ fields: 'name,currency,account_status,business', access_token: TOKEN });
     const res = await fetch(`${API}/${account}?${params}`);
     const j = await res.json();
-    if (j.error) return { id: account, name: account, currency: '?', status: 0 };
-    return { id: account, name: j.name || account, currency: j.currency || '?', status: j.account_status || 0 };
+    if (j.error) return { id: account, name: account, currency: '?', status: 0, biz: '' };
+    return {
+      id: account,
+      name: j.name || account,
+      currency: j.currency || '?',
+      status: j.account_status || 0,
+      biz: (j.business && j.business.name) || '',
+    };
   } catch {
-    return { id: account, name: account, currency: '?', status: 0 };
+    return { id: account, name: account, currency: '?', status: 0, biz: '' };
   }
 }
 
@@ -137,10 +143,10 @@ async function accountInfo(account) {
       accounts.push(info);
       allRows.push(...rows);
       budgets.push(...buds);
-      console.log(`  ${info.name} (${acc}): ${rows.length} filas · ${buds.length} presupuestos`);
+      console.log(`  ${info.name} (${acc}) · BM: ${info.biz || '?'} · ${rows.length} filas · ${buds.length} presupuestos`);
     } catch (e) {
       console.error(`  ERROR en ${acc}: ${e.message}`);
-      accounts.push({ id: acc, name: acc, currency: '?', status: -1, error: e.message });
+      accounts.push({ id: acc, name: acc, currency: '?', status: -1, biz: '', error: e.message });
     }
   }
 
