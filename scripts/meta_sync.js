@@ -1,5 +1,5 @@
 /**
- * meta_sync.js — Sincroniza gasto y leads de Meta Ads → meta_data.json
+ * meta_sync.js — Sincroniza gasto, leads y presupuestos de Meta Ads → meta_data.json
  * Corre en GitHub Actions cada 15 min. Token desde META_TOKEN (GitHub Secret).
  */
 
@@ -79,6 +79,29 @@ async function accountInsights(account, since, until) {
   }));
 }
 
+// Presupuestos del día: campañas (CBO) + conjuntos (ABO)
+async function accountBudgets(account) {
+  const pc = new URLSearchParams({ fields: 'name,effective_status,daily_budget', limit: '500', access_token: TOKEN });
+  const camps = await fetchAllPages(`${API}/${account}/campaigns?${pc}`);
+  const map = {};
+  camps.forEach((c) => { map[c.id] = { name: c.name, st: c.effective_status, b: parseFloat(c.daily_budget) || 0, act: 0, abA: 0, abT: 0 }; });
+  const pa = new URLSearchParams({ fields: 'campaign_id,effective_status,daily_budget', limit: '500', access_token: TOKEN });
+  const sets = await fetchAllPages(`${API}/${account}/adsets?${pa}`);
+  sets.forEach((s) => {
+    const c = map[s.campaign_id]; if (!c) return;
+    const b = parseFloat(s.daily_budget) || 0;
+    if (s.effective_status === 'ACTIVE') { c.act++; c.abA += b; }
+    c.abT += b;
+  });
+  const out = [];
+  Object.values(map).forEach((c) => {
+    const budget = c.b || (c.act > 0 ? c.abA : c.abT);
+    if (budget > 0 || c.act > 0) out.push({ c: c.name, b: budget, act: c.act, st: c.st });
+  });
+  return out;
+}
+
+// Nombre y moneda de la cuenta (informativo)
 async function accountInfo(account) {
   try {
     const params = new URLSearchParams({ fields: 'name,currency,account_status', access_token: TOKEN });
@@ -103,15 +126,18 @@ async function accountInfo(account) {
 
   const allRows = [];
   const accounts = [];
+  const budgets = [];
   for (const acc of ACCOUNTS) {
     try {
-      const [info, rows] = await Promise.all([
+      const [info, rows, buds] = await Promise.all([
         accountInfo(acc),
         accountInsights(acc, since, today),
+        accountBudgets(acc).catch(() => []),
       ]);
       accounts.push(info);
       allRows.push(...rows);
-      console.log(`  ${info.name} (${acc}): ${rows.length} filas`);
+      budgets.push(...buds);
+      console.log(`  ${info.name} (${acc}): ${rows.length} filas · ${buds.length} presupuestos`);
     } catch (e) {
       console.error(`  ERROR en ${acc}: ${e.message}`);
       accounts.push({ id: acc, name: acc, currency: '?', status: -1, error: e.message });
@@ -151,6 +177,7 @@ async function accountInfo(account) {
         })),
     },
     daily,
+    budgets,
     rows: allRows.map((r) => ({
       d: r.date,
       a: r.account,
