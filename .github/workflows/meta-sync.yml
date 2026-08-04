@@ -1,0 +1,42 @@
+name: Sync Meta Ads
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'   # cada 15 minutos
+  workflow_dispatch:          # permite correrlo manual desde la pestaña Actions
+
+permissions:
+  contents: write
+
+concurrency:
+  group: meta-sync
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Sincronizar Meta Ads
+        env:
+          META_TOKEN: ${{ secrets.META_TOKEN }}
+        run: node scripts/meta_sync.js
+
+      - name: Commit meta_data.json
+        run: |
+          git config user.name "meta-sync-bot"
+          git config user.email "actions@github.com"
+          git add meta_data.json
+          if git diff --cached --quiet; then
+            echo "Sin cambios"
+          else
+            git commit -m "sync: meta_data.json [skip ci]"
+            git push
+          fi
