@@ -578,6 +578,21 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
       <div id="ciudad-bars"></div>
     </div>
 
+    <!-- META ADS · DATOS AUTOMÁTICOS -->
+    <div class="dropi-card" id="meta-card" style="margin-bottom:14px">
+      <div class="dropi-header">
+        <div>
+          <div class="dropi-title">📡 Meta Ads · Datos automáticos</div>
+          <div class="dropi-sub">Gasto y leads sincronizados cada 15 min desde Meta API</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="dropi-badge" id="meta-upd">Cargando…</span>
+          <button class="dropi-reset" onclick="loadMetaData(true)">↺ Actualizar</button>
+        </div>
+      </div>
+      <div id="meta-body"><div class="dropi-hist-empty">Cargando datos de Meta Ads…</div></div>
+    </div>
+
     <!-- PAUTA / CPA POR PRODUCTO -->
     <div class="pauta-card" id="pauta-card" style="display:none">
       <div class="pauta-header">
@@ -1168,6 +1183,7 @@ async function recargar(){
     }
     renderAll();
     setLabel();
+    loadMetaData(false); // refrescar también el gasto de Meta
     const t=new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
     document.getElementById('upd-txt').textContent='Act. '+t;
     document.getElementById('upd-chip').style.display='';
@@ -1193,6 +1209,7 @@ function mostrarDash(){
   syncDP();renderAll();startAuto();
   renderDropiHistorico(null); // mostrar estado vacío hasta que se suba Excel
   updateSoundBtn(); // pintar el estado del botón 🔔 según localStorage
+  loadMetaData(false); // cargar gasto/leads de Meta Ads
 }
 function volverSetup(){clearInterval(autoT);clearInterval(cntT);document.getElementById('main').style.display='none';document.getElementById('setup-screen').style.display='flex';}
 function showErr(m){const e=document.getElementById('setup-err');e.textContent=m;e.style.display=m?'block':'none';}
@@ -1472,6 +1489,7 @@ function renderAll(){
   renderGlobalStats();
   renderKPIs(rows);renderEstado(rows);renderTiendas(rows);renderProductos(rows);renderCiudades(rows);renderInspector(rows);
   renderPauta();
+  renderMeta();
   // Sincronizar chip de sección con el período activo
   const chip=document.getElementById('section-chip');
   if(chip) chip.textContent='📅 '+document.getElementById('period-txt').textContent;
@@ -2253,6 +2271,156 @@ function resetDropi(){
 }
 
 // ─────────────────────────────────────────────
+// META ADS · DATOS AUTOMÁTICOS (meta_data.json vía GitHub Actions)
+// ─────────────────────────────────────────────
+let metaData = null;
+
+async function loadMetaData(showT){
+  // 1º intenta el archivo junto al dashboard (GitHub Pages); 2º el raw del repo
+  const urls = [
+    'meta_data.json?v=' + Date.now(),
+    'https://raw.githubusercontent.com/deinerduvanduarte/finanzas/main/meta_data.json?v=' + Date.now()
+  ];
+  for(const u of urls){
+    try{
+      const r = await fetch(u, {cache:'no-store'});
+      if(!r.ok) continue;
+      const j = await r.json();
+      if(j && Array.isArray(j.rows)){
+        metaData = j;
+        renderMeta();
+        if(curFrom === curTo) renderPauta(); // re-aplica auto-llenado del día
+        if(showT) toast('📡 Meta actualizado · ' + (j.updated_at_co||''));
+        return true;
+      }
+    }catch(e){}
+  }
+  const el = document.getElementById('meta-body');
+  if(el && !metaData) el.innerHTML = '<div class="dropi-hist-empty">No se pudo cargar meta_data.json — verifica que el workflow "Sync Meta Ads" haya corrido en GitHub.</div>';
+  if(showT) toast('❌ No se pudo cargar datos de Meta');
+  return false;
+}
+
+// Extrae el producto del nombre de campaña: "🔴08-07|NEXORA|BURURAN|CBO|ADS 3" → BURURAN
+const META_JARGON = /^(NEXORA|CBO|ABO|ADS\b.*|POSD.*|VIDEO|VID\b.*|IMG.*|IMAGEN|TRAFICO|TEST.*|ESCALA.*|GANADOR(ES)?\b.*|.*\bGANADOR(ES)?)$/;
+function metaProductFromCampaign(name){
+  const parts = String(name||'').split('|')
+    .map(s=>s.trim().toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g,''))
+    .filter(Boolean);
+  for(let i=1;i<parts.length;i++){
+    const p = parts[i];
+    if(META_JARGON.test(p)) continue;
+    if(/^\d/.test(p)) continue; // fechas, "80K GANADOR", etc.
+    return p;
+  }
+  return 'OTROS';
+}
+
+const fMeta = n => '$' + Math.round(n).toLocaleString('es-CO');
+
+function renderMeta(){
+  const el = document.getElementById('meta-body');
+  if(!el) return;
+  if(!metaData){ el.innerHTML = '<div class="dropi-hist-empty">Cargando datos de Meta Ads…</div>'; return; }
+
+  const rows  = metaData.rows.filter(r => r.d >= curFrom && r.d <= curTo);
+  const inv   = rows.reduce((s,r)=>s+r.s,0);
+  const leads = rows.reduce((s,r)=>s+r.l,0);
+  const cpl   = leads>0 ? inv/leads : 0;
+  const t     = metaData.today || {};
+  const nCuentas = (metaData.accounts||[]).filter(a=>a.status===1).length;
+
+  // Agrupar por producto (período seleccionado)
+  const prods = {};
+  rows.forEach(r=>{
+    const p = metaProductFromCampaign(r.c);
+    if(!prods[p]) prods[p] = {inv:0, leads:0};
+    prods[p].inv += r.s; prods[p].leads += r.l;
+  });
+  const ps = Object.entries(prods).sort((a,b)=>b[1].inv-a[1].inv);
+  const maxInv = ps.length ? ps[0][1].inv : 1;
+
+  // Campañas de hoy (top por gasto)
+  const camps = (t.campaigns||[]).filter(c=>c.spend>0).slice(0,8);
+  const maxCamp = camps.length ? camps[0].spend : 1;
+
+  el.innerHTML = `
+    <div class="dropi-kpis" style="grid-template-columns:repeat(4,1fr)">
+      <div class="dk"><div class="dk-lbl">💸 Gasto período</div><div class="dk-val" style="color:#fbbf24">${fMeta(inv)}</div><div class="dk-sub" style="color:rgba(255,255,255,.5)">${curFrom===curTo?'día seleccionado':fmtDisp(curFrom)+' – '+fmtDisp(curTo)}</div></div>
+      <div class="dk"><div class="dk-lbl">👥 Leads período</div><div class="dk-val" style="color:#34d399">${leads.toLocaleString('es-CO')}</div><div class="dk-sub" style="color:rgba(255,255,255,.5)">chats + formularios</div></div>
+      <div class="dk"><div class="dk-lbl">📉 Costo x Lead</div><div class="dk-val" style="color:#a78bfa">${cpl>0?fMeta(cpl):'—'}</div><div class="dk-sub" style="color:rgba(255,255,255,.5)">promedio período</div></div>
+      <div class="dk"><div class="dk-lbl">🏦 Cuentas activas</div><div class="dk-val" style="color:#f8fafc">${nCuentas}</div><div class="dk-sub" style="color:rgba(255,255,255,.5)">hoy: ${fMeta(t.spend||0)} · ${t.leads||0} leads</div></div>
+    </div>
+    ${ps.length?`
+    <div class="dropi-compare" style="margin-top:0;margin-bottom:12px">
+      <div class="dc-title">📦 Gasto por producto · período seleccionado</div>
+      ${ps.map(([p,v])=>`
+        <div class="dc-row">
+          <span class="dc-label" title="${p}">${p}</span>
+          <div class="dc-bar-track"><div class="dc-bar-fill" style="width:${Math.round(v.inv/maxInv*100)}%;background:#818cf8"></div></div>
+          <span class="dc-pct" style="color:#c7d2fe;width:auto;min-width:150px">${fMeta(v.inv)} · ${v.leads} leads${v.leads>0?' · CPL '+fMeta(v.inv/v.leads):''}</span>
+        </div>`).join('')}
+    </div>`:''}
+    ${camps.length?`
+    <div class="dropi-compare" style="margin-top:0">
+      <div class="dc-title">📣 Campañas activas hoy · por gasto</div>
+      ${camps.map(c=>`
+        <div class="dc-row">
+          <span class="dc-label" style="width:280px" title="${c.campaign_name}">${c.campaign_name}</span>
+          <div class="dc-bar-track"><div class="dc-bar-fill" style="width:${Math.round(c.spend/maxCamp*100)}%;background:#34d399"></div></div>
+          <span class="dc-pct" style="color:#6ee7b7;width:auto;min-width:130px">${fMeta(c.spend)} · ${c.leads} leads</span>
+        </div>`).join('')}
+    </div>`:''}
+  `;
+  const upd = document.getElementById('meta-upd');
+  if(upd) upd.textContent = '🕐 ' + (metaData.updated_at_co || '—');
+}
+
+// Auto-llenado de la sección Pauta con datos reales de Meta
+function applyMetaAutofill(date, combos){
+  if(!metaData || !Array.isArray(metaData.rows)) return;
+  const dayRows = metaData.rows.filter(r=>r.d===date);
+  if(!dayRows.length) return;
+
+  const metaProd = {};
+  dayRows.forEach(r=>{
+    const p = metaProductFromCampaign(r.c);
+    if(!metaProd[p]) metaProd[p] = {inv:0, leads:0};
+    metaProd[p].inv += r.s; metaProd[p].leads += r.l;
+  });
+
+  const norm = s => String(s||'').toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+  const matches = {}; // metaProducto → [keys de combos]
+  Object.entries(combos).forEach(([key,c])=>{
+    const np = norm(c.prod);
+    Object.keys(metaProd).forEach(mp=>{
+      if(np.includes(mp) || (np.length>=4 && mp.includes(np))){
+        (matches[mp] = matches[mp]||[]).push(key);
+      }
+    });
+  });
+
+  let changed = false;
+  Object.entries(matches).forEach(([mp, keys])=>{
+    const totV = keys.reduce((s,k)=>s+combos[k].ventas,0);
+    keys.forEach(k=>{
+      const prev = pautaData[k];
+      // Respeta valores escritos a mano (sin marca auto)
+      if(prev && (prev.inv||prev.leads) && !prev.auto) return;
+      const share = totV>0 ? combos[k].ventas/totV : 1/keys.length;
+      pautaData[k] = {
+        inv:   String(Math.round(metaProd[mp].inv  * share)),
+        leads: String(Math.round(metaProd[mp].leads* share)),
+        ts: 'auto · Meta API',
+        auto: true
+      };
+      changed = true;
+    });
+  });
+  if(changed) savePautaData();
+}
+
+// ─────────────────────────────────────────────
 // PAUTA / CPA POR PRODUCTO
 // ─────────────────────────────────────────────
 const PAUTA_KEY = 'vd_pauta_historico'; // clave única histórica
@@ -2465,6 +2633,9 @@ function renderPauta(){
     }
   });
 
+  // Auto-llenar inversión/leads desde Meta API (respeta valores manuales)
+  applyMetaAutofill(activeDate, combos);
+
   const keys = Object.keys(combos).sort();
   document.getElementById('pauta-sub').textContent =
     keys.length+' producto'+(keys.length!==1?'s':'')+' detectados · '+activeDate.split('-').reverse().join('/');
@@ -2558,6 +2729,7 @@ function renderPauta(){
 function updatePauta(key, field, val){
   if(!pautaData[key]) pautaData[key]={inv:'',leads:''};
   pautaData[key][field] = val;
+  delete pautaData[key].auto; // editado a mano — Meta ya no lo sobrescribe
   pautaData[key].ts = new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
   savePautaData();
   // Recalcular solo esa tarjeta sin re-renderizar todo
