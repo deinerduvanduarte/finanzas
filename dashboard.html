@@ -2438,39 +2438,61 @@ async function refreshMeta(showT){
   if(showT) toast(live ? '⚡ Actualizado EN VIVO desde Meta API' : '📡 Actualizado (sync GitHub · usa 🔑 Token para modo en vivo)');
 }
 
-// OPTIMIZACIÓN DE ANUNCIOS · CPA real por anuncio (nivel ad, requiere token)
+// OPTIMIZACIÓN DE ANUNCIOS · CPA real por anuncio (requiere token)
 let metaAdsCache = {key:'', ts:0, ads:null};
+let metaAdsMonthCache = {key:'', ts:0, ads:null};
+let adsOptTab = '';
 
-async function fetchMetaAds(force){
+async function fetchAdsRange(since, until, cacheObj, force){
   const tk = localStorage.getItem(LMT);
   if(!tk) return null;
-  const key = curFrom + '_' + curTo;
-  if(!force && metaAdsCache.ads && metaAdsCache.key === key && Date.now()-metaAdsCache.ts < 60000)
-    return metaAdsCache.ads;
+  const key = since+'_'+until;
+  if(!force && cacheObj.ads && cacheObj.key===key && Date.now()-cacheObj.ts<60000) return cacheObj.ads;
   const out = [];
   for(const acc of META_ACCOUNTS){
     const p = new URLSearchParams({
       fields:'ad_id,ad_name,campaign_name,spend,actions', level:'ad',
-      time_range: JSON.stringify({since:curFrom, until:curTo}),
+      time_range: JSON.stringify({since, until}),
       limit:'1000', access_token: tk
     });
     const j = await (await fetch('https://graph.facebook.com/v21.0/'+acc+'/insights?'+p)).json();
     if(j.error) throw new Error(j.error.message);
     (j.data||[]).forEach(x=>out.push({
-      id:String(x.ad_id||''), name:x.ad_name||'', camp:x.campaign_name||'',
+      acc, id:String(x.ad_id||''), name:x.ad_name||'', camp:x.campaign_name||'',
       spend:parseFloat(x.spend)||0, leads:metaLeadsFromActions(x.actions), st:''
     }));
-    try{
+  }
+  try{
+    for(const acc of META_ACCOUNTS){
       const ps = new URLSearchParams({fields:'id,effective_status',limit:'1000',access_token:tk});
       const js2 = await (await fetch('https://graph.facebook.com/v21.0/'+acc+'/ads?'+ps)).json();
       if(!js2.error){
         const m = {}; (js2.data||[]).forEach(a=>m[a.id]=a.effective_status);
         out.forEach(o=>{ if(m[o.id]) o.st = m[o.id]; });
       }
-    }catch(e){}
-  }
-  metaAdsCache = {key, ts:Date.now(), ads:out};
+    }
+  }catch(e){}
+  cacheObj.key = key; cacheObj.ts = Date.now(); cacheObj.ads = out;
   return out;
+}
+
+function salesByAd(from, to){
+  const m = {};
+  allRows.forEach(r=>{
+    if(!r._d || r._d < from || r._d > to) return;
+    const a = (r.anuncio||'').trim();
+    if(a) m[a] = (m[a]||0)+1;
+  });
+  return m;
+}
+
+function matchSales(ad, sales, used){
+  let v = sales[ad.id]||0;
+  if(v){ if(used) used.add(ad.id); return v; }
+  for(const k in sales){
+    if(k && ad.name && ad.name.includes(k)){ if(used) used.add(k); return sales[k]; }
+  }
+  return 0;
 }
 
 async function renderAdsOpt(force){
@@ -2479,84 +2501,101 @@ async function renderAdsOpt(force){
   const pb = document.getElementById('adsopt-period');
   if(pb) pb.textContent = curFrom===curTo ? '📅 '+fmtDisp(curFrom) : '📅 '+fmtDisp(curFrom)+' – '+fmtDisp(curTo);
   if(!localStorage.getItem(LMT)){
-    el.innerHTML = '<div class="dropi-hist-empty">Pega tu 🔑 Token en la sección "Meta Ads" para activar este análisis.</div>';
+    el.innerHTML = '<div class="dropi-hist-empty">Pega tu 🔑 Token en "Meta Ads" para activar este análisis.</div>';
     return;
   }
   el.innerHTML = '<div class="dropi-hist-empty">Analizando anuncios del período…</div>';
-  let ads;
-  try{ ads = await fetchMetaAds(force); }
-  catch(e){ el.innerHTML = '<div class="dropi-hist-empty">Error consultando Meta: '+e.message+'</div>'; return; }
-  if(!ads){ return; }
 
-  // Ventas por anuncio desde el Sheets (período seleccionado)
-  const sales = {};
-  filteredRows().forEach(r=>{
-    const a = (r.anuncio||'').trim();
-    if(a) sales[a] = (sales[a]||0)+1;
-  });
+  const nHoy = new Date();
+  const mStart = ymd(new Date(nHoy.getFullYear(), nHoy.getMonth(), 1));
+  const hoy = ymd(nHoy);
+  let adsP, adsM;
+  try{
+    adsP = await fetchAdsRange(curFrom, curTo, metaAdsCache, force);
+    adsM = (curFrom===mStart && curTo===hoy) ? adsP : await fetchAdsRange(mStart, hoy, metaAdsMonthCache, force);
+  }catch(e){ el.innerHTML = '<div class="dropi-hist-empty">Error Meta: '+e.message+'</div>'; return; }
+  if(!adsP) return;
 
-  const rows = [];
-  const usedSaleIds = new Set();
-  ads.forEach(a=>{
-    let v = sales[a.id]||0;
-    if(v) usedSaleIds.add(a.id);
-    else{
-      for(const k in sales){
-        if(k && a.name && a.name.includes(k)){ v = sales[k]; usedSaleIds.add(k); break; }
-      }
-    }
+  const salesP = salesByAd(curFrom, curTo);
+  const salesM = salesByAd(mStart, hoy);
+
+  const monthById = {};
+  (adsM||[]).forEach(a=>{ monthById[a.id] = {spend:a.spend, ventas:matchSales(a, salesM)}; });
+
+  const rows = []; const used = new Set();
+  adsP.forEach(a=>{
+    const v = matchSales(a, salesP, used);
     if(a.spend>0 || v>0){
-      rows.push({...a, ventas:v, cpa: v>0 ? a.spend/v : 0, prod: metaProductFromCampaign(a.camp)});
+      const m = monthById[a.id] || {spend:0, ventas:matchSales(a, salesM)};
+      rows.push({...a, ventas:v, cpa: v>0 ? a.spend/v : 0,
+        vM:m.ventas, cpaM: m.ventas>0 ? m.spend/m.ventas : 0,
+        prod: metaProductFromCampaign(a.camp)});
     }
   });
-  // Ventas con ID de anuncio que Meta no reportó en el período
-  Object.entries(sales).forEach(([k,v])=>{
-    if(!usedSaleIds.has(k)) rows.push({id:k,name:'(sin datos de gasto en Meta)',camp:'',spend:0,leads:0,st:'',ventas:v,cpa:0,prod:'—'});
+  Object.entries(salesP).forEach(([k,v])=>{
+    if(!used.has(k)) rows.push({acc:'', id:k, name:'(sin gasto reportado en Meta)', camp:'', spend:0, st:'',
+      ventas:v, cpa:0, vM:salesM[k]||0, cpaM:0, prod:'—'});
   });
+
+  // Pestañas por cuenta
+  const accNm = id => { const a = ((metaData&&metaData.accounts)||[]).find(x=>x.id===id); return a ? a.name : (id||'Sin datos Meta'); };
+  const accIds = [...new Set(rows.map(r=>r.acc||'otros'))];
+  if(!adsOptTab || !accIds.includes(adsOptTab)) adsOptTab = accIds[0]||'';
+  const tabRows = rows.filter(r=>(r.acc||'otros')===adsOptTab);
+
+  // Agrupar por producto
+  const byProd = {};
+  tabRows.forEach(r=>{ (byProd[r.prod] = byProd[r.prod]||[]).push(r); });
+  const prodOrder = Object.entries(byProd)
+    .map(([p,list])=>({p, list,
+      spend: list.reduce((s,x)=>s+x.spend,0),
+      ventas: list.reduce((s,x)=>s+x.ventas,0)}))
+    .sort((a,b)=>b.spend-a.spend);
 
   const cpaColor = c => c<=13000 ? '#34d399' : c<=17000 ? '#fb923c' : '#f87171';
   const cpaBg    = c => c<=13000 ? 'rgba(52,211,153,.14)' : c<=17000 ? 'rgba(251,146,60,.14)' : 'rgba(248,113,113,.14)';
+  const cpaChip  = (c,v) => v>0
+    ? '<span style="font-size:.75rem;font-weight:800;color:'+cpaColor(c)+';background:'+cpaBg(c)+';padding:2px 9px;border-radius:20px">'+fMeta(c)+'</span>'
+    : '<span style="font-size:.72rem;font-weight:800;color:#f87171">▲</span>';
   const stDot = st => st==='ACTIVE'
     ? '<span title="Activo" style="color:#34d399">●</span>'
-    : '<span title="'+(st||'estado desconocido')+'" style="color:rgba(255,255,255,.3)">●</span>';
+    : '<span title="'+(st||'?')+'" style="color:rgba(255,255,255,.3)">●</span>';
 
-  const conVentas = rows.filter(a=>a.ventas>0).sort((x,y)=>y.spend-x.spend);
-  const sinVentas = rows.filter(a=>a.ventas===0 && a.spend>0).sort((x,y)=>y.spend-x.spend);
-  const gastoSin  = sinVentas.reduce((s,a)=>s+a.spend,0);
+  const GRID = '16px minmax(120px,1.3fr) 85px 44px 100px 58px 100px';
+  const head = `<div style="display:grid;grid-template-columns:${GRID};gap:8px;padding:6px 10px;font-size:.58rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:rgba(255,255,255,.35)">
+    <span></span><span>Anuncio</span><span style="text-align:right">Gasto</span><span style="text-align:center">Vtas</span><span style="text-align:right">CPA período</span><span style="text-align:center">Vtas mes</span><span style="text-align:right">CPA mes</span></div>`;
+  const row = a => `<div style="display:grid;grid-template-columns:${GRID};align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid rgba(255,255,255,.05)">
+    <span style="text-align:center">${stDot(a.st)}</span>
+    <div style="overflow:hidden"><div style="font-size:.76rem;font-weight:700;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${a.name||a.id}">${a.id}</div></div>
+    <span style="font-size:.78rem;font-weight:800;color:#f8fafc;text-align:right">${fMeta(a.spend)}</span>
+    <span style="font-size:.78rem;font-weight:800;color:${a.ventas>0?'#34d399':'#f87171'};text-align:center">${a.ventas}</span>
+    <span style="text-align:right">${cpaChip(a.cpa, a.ventas)}</span>
+    <span style="font-size:.78rem;font-weight:800;color:${a.vM>0?'#a7f3d0':'#f87171'};text-align:center">${a.vM}</span>
+    <span style="text-align:right">${cpaChip(a.cpaM, a.vM)}</span>
+  </div>`;
 
-  const row = a => `
-    <div style="display:grid;grid-template-columns:16px minmax(140px,1.4fr) minmax(80px,.8fr) 90px 55px 110px;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.06)">
-      <span style="text-align:center">${stDot(a.st)}</span>
-      <div style="overflow:hidden">
-        <div style="font-size:.78rem;font-weight:700;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${a.name||a.id}">${a.id}</div>
-        <div style="font-size:.65rem;color:rgba(255,255,255,.35);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${a.camp}">${a.name||a.camp||''}</div>
-      </div>
-      <span style="font-size:.72rem;font-weight:700;color:rgba(255,255,255,.55)">${a.prod}</span>
-      <span style="font-size:.8rem;font-weight:800;color:#f8fafc;text-align:right">${fMeta(a.spend)}</span>
-      <span style="font-size:.8rem;font-weight:800;color:${a.ventas>0?'#34d399':'#f87171'};text-align:center">${a.ventas}</span>
-      <span style="text-align:right">${a.ventas>0
-        ? '<span style="font-size:.78rem;font-weight:800;color:'+cpaColor(a.cpa)+';background:'+cpaBg(a.cpa)+';padding:3px 10px;border-radius:20px">'+fMeta(a.cpa)+'</span>'
-        : '<span style="font-size:.72rem;font-weight:800;color:#f87171">▲ sin ventas</span>'}</span>
-    </div>`;
-
-  const head = `
-    <div style="display:grid;grid-template-columns:16px minmax(140px,1.4fr) minmax(80px,.8fr) 90px 55px 110px;gap:10px;padding:6px 10px;font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:rgba(255,255,255,.35)">
-      <span></span><span>Anuncio</span><span>Producto</span><span style="text-align:right">Gasto</span><span style="text-align:center">Ventas</span><span style="text-align:right">CPA</span>
-    </div>`;
+  const tabs = accIds.map(id=>
+    '<button onclick="adsOptTab=\''+id+'\';renderAdsOpt()" style="background:'+(id===adsOptTab?'rgba(99,102,241,.25)':'rgba(255,255,255,.06)')+
+    ';border:1.5px solid '+(id===adsOptTab?'#818cf8':'rgba(255,255,255,.12)')+
+    ';color:'+(id===adsOptTab?'#c7d2fe':'rgba(255,255,255,.5)')+
+    ';padding:6px 16px;border-radius:8px;font-size:.78rem;font-weight:800;cursor:pointer;font-family:var(--font)">'+accNm(id)+'</button>'
+  ).join('');
 
   el.innerHTML = `
-    ${conVentas.length?`
-    <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;overflow:hidden;margin-bottom:12px">
-      <div style="padding:10px 14px;font-size:.75rem;font-weight:700;color:#a7f3d0;background:rgba(52,211,153,.06)">✅ Anuncios con ventas · ${conVentas.length}</div>
-      ${head}
-      <div style="max-height:340px;overflow-y:auto">${conVentas.map(row).join('')}</div>
-    </div>`:'<div class="dropi-hist-empty">Sin anuncios con ventas en este período</div>'}
-    ${sinVentas.length?`
-    <div style="background:rgba(248,113,113,.05);border:1px solid rgba(248,113,113,.25);border-radius:10px;overflow:hidden">
-      <div style="padding:10px 14px;font-size:.75rem;font-weight:700;color:#fca5a5;background:rgba(248,113,113,.08)">💸 Gastan sin traer ventas · ${sinVentas.length} anuncios · ${fMeta(gastoSin)} perdidos en el período</div>
-      ${head}
-      <div style="max-height:300px;overflow-y:auto">${sinVentas.map(row).join('')}</div>
-    </div>`:''}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">${tabs}</div>
+    ${prodOrder.length ? prodOrder.map(g=>{
+      const conV = g.list.filter(x=>x.ventas>0).sort((a,b)=>b.spend-a.spend);
+      const sinV = g.list.filter(x=>x.ventas===0 && x.spend>0).sort((a,b)=>b.spend-a.spend);
+      const gastoSin = sinV.reduce((s,x)=>s+x.spend,0);
+      return `<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;overflow:hidden;margin-bottom:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(255,255,255,.04);flex-wrap:wrap;gap:6px">
+          <span style="font-size:.84rem;font-weight:800;color:#f8fafc">📦 ${g.p}</span>
+          <span style="font-size:.7rem;font-weight:700;color:rgba(255,255,255,.5)">${fMeta(g.spend)} · ${g.ventas} ventas${sinV.length?' · <span style="color:#f87171">'+sinV.length+' sin vender ('+fMeta(gastoSin)+')</span>':''}</span>
+        </div>
+        ${head}
+        <div style="max-height:300px;overflow-y:auto">${conV.map(row).join('')}${sinV.map(row).join('')}</div>
+      </div>`;
+    }).join('') : '<div class="dropi-hist-empty">Sin anuncios en esta cuenta para el período</div>'}
   `;
 }
 
