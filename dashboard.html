@@ -2342,6 +2342,7 @@ const fMeta = n => '$' + Math.round(n).toLocaleString('es-CO');
 // ── MODO EN VIVO ──
 const LMT = 'vd_meta_token';
 const META_ACCOUNTS = ['act_2235837880587647','act_763369709939342'];
+let metaBudgetsTs = 0;
 
 function configMetaToken(){
   const cur = localStorage.getItem(LMT)||'';
@@ -2390,8 +2391,10 @@ async function fetchMetaLive(showT){
       }));
     }
 
-    // Presupuestos: campañas (CBO) + conjuntos (ABO)
-    const budgets = [];
+    // Presupuestos: campañas (CBO) + conjuntos (ABO) — cada 10 min para cuidar el límite de la API
+    let budgets = null;
+    if(Date.now()-metaBudgetsTs > 600000 || !(metaData && Array.isArray(metaData.budgets))){
+    budgets = [];
     for(const acc of META_ACCOUNTS){
       try{
         const pc = new URLSearchParams({fields:'name,effective_status,daily_budget',limit:'500',access_token:tk});
@@ -2413,9 +2416,11 @@ async function fetchMetaLive(showT){
         });
       }catch(e){}
     }
+    metaBudgetsTs = Date.now();
+    }
 
     if(!metaData) metaData = {rows:[], daily:[], accounts:[], today:{}};
-    metaData.budgets = budgets;
+    if(budgets) metaData.budgets = budgets;
 
     // Nombres de cuenta y BM (si el JSON no los trajo o les falta el BM)
     if(!(metaData.accounts||[]).length || !metaData.accounts.some(a=>a.biz)){
@@ -2461,7 +2466,7 @@ async function fetchAdsRange(since, until, cacheObj, force){
   const tk = localStorage.getItem(LMT);
   if(!tk) return null;
   const key = since+'_'+until;
-  if(!force && cacheObj.ads && cacheObj.key===key && Date.now()-cacheObj.ts<60000) return cacheObj.ads;
+  if(!force && cacheObj.ads && cacheObj.key===key && Date.now()-cacheObj.ts<300000) return cacheObj.ads;
   const out = [];
   for(const acc of META_ACCOUNTS){
     const p = new URLSearchParams({
