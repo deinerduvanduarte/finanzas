@@ -2464,11 +2464,19 @@ async function fetchAdsRange(since, until, cacheObj, force){
   }
   try{
     for(const acc of META_ACCOUNTS){
-      const ps = new URLSearchParams({fields:'id,effective_status',limit:'1000',access_token:tk});
+      const ps = new URLSearchParams({fields:'id,name,effective_status,campaign{name}',limit:'1000',access_token:tk});
       const js2 = await (await fetch('https://graph.facebook.com/v21.0/'+acc+'/ads?'+ps)).json();
       if(!js2.error){
-        const m = {}; (js2.data||[]).forEach(a=>m[a.id]=a.effective_status);
-        out.forEach(o=>{ if(m[o.id]) o.st = m[o.id]; });
+        const idx = {}; out.forEach(o=>{ if(o.acc===acc) idx[o.id]=o; });
+        (js2.data||[]).forEach(a=>{
+          const o = idx[a.id];
+          if(o){ o.st = a.effective_status; }
+          else if(a.effective_status==='ACTIVE'){
+            // Activo pero SIN gasto en el período — también se muestra
+            out.push({acc, id:String(a.id), name:a.name||'', camp:(a.campaign&&a.campaign.name)||'',
+              spend:0, leads:0, st:'ACTIVE'});
+          }
+        });
       }
     }
   }catch(e){}
@@ -2525,7 +2533,7 @@ async function renderAdsOpt(force){
   const rows = []; const used = new Set();
   adsP.forEach(a=>{
     const v = matchSales(a, salesP, used);
-    if(a.spend>0 || v>0){
+    if(a.spend>0 || v>0 || a.st==='ACTIVE'){
       const m = monthById[a.id] || {spend:0, ventas:matchSales(a, salesM)};
       rows.push({...a, ventas:v, cpa: v>0 ? a.spend/v : 0,
         vM:m.ventas, cpaM: m.ventas>0 ? m.spend/m.ventas : 0,
@@ -2569,9 +2577,9 @@ async function renderAdsOpt(force){
     <div style="overflow:hidden"><div style="font-size:.76rem;font-weight:700;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${a.name||a.id}">${a.id}</div></div>
     <span style="font-size:.78rem;font-weight:800;color:#f8fafc;text-align:right">${fMeta(a.spend)}</span>
     <span style="font-size:.78rem;font-weight:800;color:${a.ventas>0?'#34d399':'#f87171'};text-align:center">${a.ventas}</span>
-    <span style="text-align:right">${cpaChip(a.cpa, a.ventas)}</span>
-    <span style="font-size:.78rem;font-weight:800;color:${a.vM>0?'#a7f3d0':'#f87171'};text-align:center">${a.vM}</span>
-    <span style="text-align:right">${cpaChip(a.cpaM, a.vM)}</span>
+    <span style="text-align:right">${a.spend>0||a.ventas>0 ? cpaChip(a.cpa, a.ventas) : '<span style="font-size:.72rem;color:rgba(255,255,255,.3)">—</span>'}</span>
+    <span style="font-size:.78rem;font-weight:800;color:${a.vM>0?'#a7f3d0':'rgba(255,255,255,.35)'};text-align:center">${a.vM}</span>
+    <span style="text-align:right">${a.vM>0 ? cpaChip(a.cpaM, a.vM) : '<span style="font-size:.72rem;color:rgba(255,255,255,.3)">—</span>'}</span>
   </div>`;
 
   const tabs = accIds.map(id=>
@@ -2586,14 +2594,15 @@ async function renderAdsOpt(force){
     ${prodOrder.length ? prodOrder.map(g=>{
       const conV = g.list.filter(x=>x.ventas>0).sort((a,b)=>b.spend-a.spend);
       const sinV = g.list.filter(x=>x.ventas===0 && x.spend>0).sort((a,b)=>b.spend-a.spend);
+      const sinG = g.list.filter(x=>x.ventas===0 && x.spend===0);
       const gastoSin = sinV.reduce((s,x)=>s+x.spend,0);
       return `<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;overflow:hidden;margin-bottom:12px">
         <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(255,255,255,.04);flex-wrap:wrap;gap:6px">
           <span style="font-size:.84rem;font-weight:800;color:#f8fafc">📦 ${g.p}</span>
-          <span style="font-size:.7rem;font-weight:700;color:rgba(255,255,255,.5)">${fMeta(g.spend)} · ${g.ventas} ventas${sinV.length?' · <span style="color:#f87171">'+sinV.length+' sin vender ('+fMeta(gastoSin)+')</span>':''}</span>
+          <span style="font-size:.7rem;font-weight:700;color:rgba(255,255,255,.5)">${fMeta(g.spend)} · ${g.ventas} ventas${sinV.length?' · <span style="color:#f87171">'+sinV.length+' sin vender ('+fMeta(gastoSin)+')</span>':''}${sinG.length?' · <span style="color:rgba(255,255,255,.35)">'+sinG.length+' activos sin gasto</span>':''}</span>
         </div>
         ${head}
-        <div style="max-height:300px;overflow-y:auto">${conV.map(row).join('')}${sinV.map(row).join('')}</div>
+        <div style="max-height:300px;overflow-y:auto">${conV.map(row).join('')}${sinV.map(row).join('')}${sinG.map(row).join('')}</div>
       </div>`;
     }).join('') : '<div class="dropi-hist-empty">Sin anuncios en esta cuenta para el período</div>'}
   `;
@@ -3125,6 +3134,15 @@ function renderPautaSummary(){
     totalInv   += parseFloat(String(d.inv||'').replace(/[^0-9.]/g,''))||0;
     totalLeads += parseFloat(String(d.leads||'').replace(/[^0-9.]/g,''))||0;
   });
+  // Con Meta conectado: usar el gasto y leads GENERALES del día (TODAS las campañas,
+  // incluidas las de productos que aún no venden)
+  if(typeof metaData!=='undefined' && metaData && Array.isArray(metaData.rows)){
+    const mRows = metaData.rows.filter(r=>r.d===activeDate);
+    if(mRows.length){
+      totalInv   = mRows.reduce((s2,r)=>s2+r.s,0);
+      totalLeads = mRows.reduce((s2,r)=>s2+r.l,0);
+    }
+  }
 
   // Totales desde Sheets (hoy)
   const totalVentas = rows.length;
