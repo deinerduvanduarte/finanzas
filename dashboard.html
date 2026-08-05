@@ -2341,8 +2341,35 @@ const fMeta = n => '$' + Math.round(n).toLocaleString('es-CO');
 
 // ── MODO EN VIVO ──
 const LMT = 'vd_meta_token';
-const META_ACCOUNTS = ['act_2235837880587647','act_763369709939342'];
-let metaBudgetsTs = 0;
+// ╔══════════════════════════════════════════════════════════════════╗
+// ║  ⚙️  CONFIGURACIÓN DE CUENTAS PUBLICITARIAS — EDITA SOLO AQUÍ     ║
+// ╠══════════════════════════════════════════════════════════════════╣
+// ║ Para AGREGAR una cuenta: copia una línea de abajo y cambia los    ║
+// ║ datos. Para QUITARLA: borra o comenta la línea con //             ║
+// ║                                                                   ║
+// ║   id     → el act_XXXXX de la cuenta                              ║
+// ║            (Business Settings → Cuentas publicitarias → ID)       ║
+// ║   nombre → como quieres verlo en el dashboard                     ║
+// ║   bm     → nombre corto del Business Manager / portafolio         ║
+// ║                                                                   ║
+// ║ ⚠️  ADEMÁS de editar aquí, debes hacer 2 cosas más:               ║
+// ║   1) Dar acceso a la cuenta al usuario del sistema                ║
+// ║      "dashboard-sync" con permiso "Ver rendimiento"               ║
+// ║      (business.facebook.com/settings/system-users)                ║
+// ║   2) Agregar el mismo act_XXXXX en scripts/meta_sync.js           ║
+// ║      (en la lista ACCOUNTS del repositorio de GitHub)             ║
+// ╚══════════════════════════════════════════════════════════════════╝
+const META_CUENTAS = [
+  { id:'act_2235837880587647', nombre:'NEXORA 1', bm:'HT' },
+  { id:'act_763369709939342',  nombre:'NEXORA 2', bm:'HT' },
+  // { id:'act_XXXXXXXXXXXX',  nombre:'MI CUENTA 3', bm:'OTRO BM' },
+];
+// ── Fin de la configuración · no hace falta tocar nada más abajo ──
+
+const META_ACCOUNTS   = META_CUENTAS.map(c=>c.id);
+const META_ACC_LABELS = Object.fromEntries(META_CUENTAS.map(c=>[c.id, c.nombre]));
+const META_ACC_BM     = Object.fromEntries(META_CUENTAS.map(c=>[c.id, c.bm||'']));
+let metaBudgetsTs = 0, metaAccTs = 0;
 
 function configMetaToken(){
   const cur = localStorage.getItem(LMT)||'';
@@ -2422,8 +2449,11 @@ async function fetchMetaLive(showT){
     if(!metaData) metaData = {rows:[], daily:[], accounts:[], today:{}};
     if(budgets) metaData.budgets = budgets;
 
-    // Nombres de cuenta y BM (si el JSON no los trajo o les falta el BM)
-    if(!(metaData.accounts||[]).length || !metaData.accounts.some(a=>a.biz)){
+    // Nombres de cuenta y BM — reintenta cada 30 min hasta tenerlos completos
+    const accsOk = (metaData.accounts||[]).length===META_ACCOUNTS.length
+                   && metaData.accounts.every(a=>a.name && !/^act_/.test(a.name) && a.biz);
+    if(!accsOk && Date.now()-metaAccTs > 1800000){
+      metaAccTs = Date.now();
       const accs = [];
       for(const acc of META_ACCOUNTS){
         try{
@@ -2665,8 +2695,12 @@ function renderMeta(){
   const accPal = ['#fbbf24','#34d399','#60a5fa','#a78bfa','#f87171','#f472b6'];
   const accRows = Object.entries(accAgg).sort((a,b)=>b[1].s-a[1].s);
   const maxAcc = accRows.length ? Math.max(accRows[0][1].s,1) : 1;
-  const accName = id => { const a=(metaData.accounts||[]).find(x=>x.id===id); return a?a.name:id; };
-  const accBiz  = id => { const a=(metaData.accounts||[]).find(x=>x.id===id); return (a&&a.biz)||''; };
+  const accName = id => {
+    const a=(metaData.accounts||[]).find(x=>x.id===id);
+    return (a&&a.name&&!/^act_/.test(a.name)) ? a.name : (META_ACC_LABELS[id]||id);
+  };
+  const accBiz  = id => { if(META_ACC_BM[id]) return META_ACC_BM[id];
+    const a=(metaData.accounts||[]).find(x=>x.id===id); return (a&&a.biz)||''; };
   const stMap = {};
   (metaData.budgets||[]).forEach(b=>{ stMap[String(b.c||'').trim()] = b.act>0; });
   const campOn = nm => stMap[String(nm||'').trim()] === true;
