@@ -2467,20 +2467,24 @@ async function fetchAdsRange(since, until, cacheObj, force){
   if(!tk) return null;
   const key = since+'_'+until;
   if(!force && cacheObj.ads && cacheObj.key===key && Date.now()-cacheObj.ts<300000) return cacheObj.ads;
-  const out = [];
+  const out = []; const errs = [];
   for(const acc of META_ACCOUNTS){
-    const p = new URLSearchParams({
-      fields:'ad_id,ad_name,campaign_name,spend,actions', level:'ad',
-      time_range: JSON.stringify({since, until}),
-      limit:'1000', access_token: tk
-    });
-    const j = await (await fetch('https://graph.facebook.com/v21.0/'+acc+'/insights?'+p)).json();
-    if(j.error) throw new Error(j.error.message);
-    (j.data||[]).forEach(x=>out.push({
-      acc, id:String(x.ad_id||''), name:x.ad_name||'', camp:x.campaign_name||'',
-      spend:parseFloat(x.spend)||0, leads:metaLeadsFromActions(x.actions), st:''
-    }));
+    try{
+      const p = new URLSearchParams({
+        fields:'ad_id,ad_name,campaign_name,spend,actions', level:'ad',
+        time_range: JSON.stringify({since, until}),
+        limit:'1000', access_token: tk
+      });
+      const j = await (await fetch('https://graph.facebook.com/v21.0/'+acc+'/insights?'+p)).json();
+      if(j.error) throw new Error(j.error.message);
+      (j.data||[]).forEach(x=>out.push({
+        acc, id:String(x.ad_id||''), name:x.ad_name||'', camp:x.campaign_name||'',
+        spend:parseFloat(x.spend)||0, leads:metaLeadsFromActions(x.actions), st:''
+      }));
+    }catch(e){ errs.push(acc+': '+e.message); }
   }
+  if(!out.length && errs.length) throw new Error(errs.join(' · '));
+  out.errs = errs;
   try{
     for(const acc of META_ACCOUNTS){
       const ps = new URLSearchParams({fields:'id,name,effective_status,campaign{name}',limit:'1000',access_token:tk});
@@ -2608,7 +2612,10 @@ async function renderAdsOpt(force){
     ';padding:6px 16px;border-radius:8px;font-size:.78rem;font-weight:800;cursor:pointer;font-family:var(--font)">'+accNm(id)+'</button>'
   ).join('');
 
+  const warn = (adsP.errs && adsP.errs.length)
+    ? '<div style="background:rgba(251,146,60,.1);border:1px solid rgba(251,146,60,.3);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:.72rem;color:#fdba74">⚠️ Sin datos de: '+adsP.errs.join(' · ')+'</div>' : '';
   el.innerHTML = `
+    ${warn}
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">${tabs}</div>
     ${prodOrder.length ? prodOrder.map(g=>{
       const conV = g.list.filter(x=>x.ventas>0).sort((a,b)=>b.spend-a.spend);
