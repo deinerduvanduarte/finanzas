@@ -2599,7 +2599,16 @@ async function renderAdsOpt(force){
   });
 
   // Pestañas por cuenta
-  const accNm = id => { const a = ((metaData&&metaData.accounts)||[]).find(x=>x.id===id); return a ? a.name : (id||'Sin datos Meta'); };
+  const accNm = id => {
+    if(!id) return 'Sin datos Meta';
+    if(typeof META_ACC_LABELS!=='undefined' && META_ACC_LABELS[id]){
+      const bm = (typeof META_ACC_BM!=='undefined' && META_ACC_BM[id]) ? ' · '+META_ACC_BM[id] : '';
+      return META_ACC_LABELS[id] + bm;
+    }
+    const a = ((metaData&&metaData.accounts)||[]).find(x=>x.id===id);
+    if(a && a.name && !/^act_/.test(a.name)) return a.name + (a.biz?' · '+a.biz:'');
+    return id;
+  };
   const accIds = [...new Set(rows.map(r=>r.acc||'otros'))];
   if(!adsOptTab || !accIds.includes(adsOptTab)) adsOptTab = accIds[0]||'';
   const tabRows = rows.filter(r=>(r.acc||'otros')===adsOptTab);
