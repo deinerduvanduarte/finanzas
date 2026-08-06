@@ -222,7 +222,7 @@ ol.pasos li{margin:7px 0} ol.pasos b{color:var(--tx)}
 <header>
  <div class="wrap">
   <h1>Definición · Duvan Álvarez</h1>
-  <div class="sub">82 kg · 1.76 m · Objetivo: perder grasa manteniendo músculo <span style="opacity:.55">· v6</span></div>
+  <div class="sub">82 kg · 1.76 m · Objetivo: perder grasa manteniendo músculo <span style="opacity:.55">· v7</span></div>
   <div class="datebar">
     <button class="btn" onclick="shiftDay(-1)">‹</button>
     <input type="date" id="fecha" onchange="setDate(this.value)">
@@ -550,17 +550,29 @@ function pickFile(e){const f=e.target.files[0];if(!f)return;const rd=new FileRea
 function setImg(d){imgB64=d;document.getElementById('camBox').innerHTML="<img src='"+d+"'>";
   document.getElementById('bAn').disabled=false;document.getElementById('bShot').disabled=true}
 
-const PROMPT=`Eres un nutricionista. Analiza la imagen.
-Si es una TABLA NUTRICIONAL o etiqueta de un producto, lee los valores exactos que aparecen y úsalos.
-Si es un PLATO DE COMIDA, identifica cada alimento y estima el peso en gramos observando el plato.
-Responde SOLO con JSON válido, sin texto extra, sin markdown, con este formato exacto:
-{"nombre":"nombre corto del plato o producto","porcion":"descripción de la porción analizada","kcal":000,"p":00,"c":00,"g":00,"items":[{"nombre":"alimento","g":000}],"confianza":"alta|media|baja","nota":"una frase breve"}
-Los valores kcal,p,c,g son números para la porción total analizada.`;
+const PROMPT=`Eres un nutricionista. Analiza la imagen y responde SOLO con JSON válido, sin markdown ni texto adicional.
+
+Si es una TABLA NUTRICIONAL o etiqueta de un producto: usa los valores exactos impresos y devuelve los de UNA sola porción tal como la define la etiqueta (1 tajada, 1 galleta, 1 vaso, 30 g...). No multipliques por el paquete entero.
+Si es un PLATO DE COMIDA: devuelve los valores del plato completo que se ve, con unidad "plato".
+
+REGLAS ESTRICTAS:
+- kcal, p, c, g son SIEMPRE los de UNA sola unidad, nunca del paquete completo.
+- "unidad" = nombre en singular de esa unidad: tajada, galleta, vaso, cucharada, plato, porción.
+- "unidad_g" = peso en gramos de UNA unidad.
+- "porcion" = máximo 8 palabras.
+- "nota" = una sola frase, máximo 15 palabras.
+- Nunca escribas tu razonamiento dentro de los campos. Solo el dato final.
+
+Formato exacto:
+{"nombre":"nombre corto","unidad":"tajada","unidad_g":18,"porcion":"1 tajada de 18 g","kcal":47,"p":2,"c":9.4,"g":0.3,"items":[{"nombre":"alimento","g":18}],"confianza":"alta|media|baja","nota":"frase breve"}`;
 const ESQUEMA={type:"object",properties:{
-  nombre:{type:"string"},porcion:{type:"string"},kcal:{type:"number"},
+  nombre:{type:"string"},unidad:{type:"string"},unidad_g:{type:"number"},porcion:{type:"string"},kcal:{type:"number"},
   p:{type:"number"},c:{type:"number"},g:{type:"number"},
   items:{type:"array",items:{type:"object",properties:{nombre:{type:"string"},g:{type:"number"}},required:["nombre","g"]}},
-  confianza:{type:"string"},nota:{type:"string"}},required:["nombre","kcal","p","c","g"]};
+  confianza:{type:"string"},nota:{type:"string"}},required:["nombre","unidad","kcal","p","c","g"]};
+function lim(s,n){s=(s==null?"":String(s)).trim();
+  s=s.replace(/\b(Let's|Wait,|Note the values|I should|We need)\b[\s\S]*$/i,"").trim();
+  return s.length>n?s.slice(0,n).replace(/\s+\S*$/,"")+"…":s}
 
 function sacarTexto(j){
   if(typeof j.output_text==="string")return j.output_text;
@@ -582,7 +594,8 @@ async function llamarIA(partes,jsonEstricto){
     const input=[{type:"text",text:partes.texto}];
     if(partes.b64)input.push({type:"image",data:partes.b64,mime_type:"image/jpeg"});
     const body={model:modelo,input:input};
-    if(jsonEstricto)body.response_format={type:"text",mime_type:"application/json",schema:ESQUEMA};
+    if(jsonEstricto){body.response_format={type:"text",mime_type:"application/json",schema:ESQUEMA};
+      body.generation_config={thinking_level:"minimal",temperature:0.1}}
     const rq=await fetch("https://generativelanguage.googleapis.com/v1beta/interactions",
       {method:"POST",headers:{"Content-Type":"application/json","x-goog-api-key":key},body:JSON.stringify(body)});
     const j=await rq.json(); const e=errDe(j); if(e)throw new Error(e);
@@ -646,28 +659,56 @@ async function analizar(){
   box.innerHTML="<div class='res'><span class='spin'></span>Analizando la imagen…</div>";
   try{
     const txt=await llamarIA({texto:PROMPT,b64:imgB64.split(',')[1]},true);
-    const m=txt.match(/\{[\s\S]*\}/); if(!m)throw new Error("La IA no devolvió JSON: "+(txt||"").slice(0,120));
-    const d=JSON.parse(m[0]); ultimo=d;
-    box.innerHTML="<div class='res'><h4>"+(d.nombre||"Alimento")+"</h4>"
-      +"<div style='font-size:12px;color:var(--tx2)'>"+(d.porcion||"")+" · confianza "+(d.confianza||"media")+"</div>"
-      +"<div class='cmeta' style='margin-top:9px;font-size:13px'><span><b style='font-size:19px'>"+r(d.kcal)+"</b> kcal</span>"
-      +"<span style='color:var(--p)'>P "+r(d.p||0)+"g</span><span style='color:var(--c)'>C "+r(d.c||0)+"g</span><span style='color:var(--g)'>G "+r(d.g||0)+"g</span></div>"
-      +(d.items&&d.items.length?"<ul class='ing show'>"+d.items.map(i=>"<li><b>"+i.nombre+"</b><span class='gq'>"+i.g+" g</span></li>").join("")+"</ul>":"")
-      +(d.nota?"<p style='font-size:12px;color:var(--tx2);margin:9px 0 0'>"+d.nota+"</p>":"")
-      +"<div class='camctl'><button class='btn pri' onclick='guardarIA()'>Añadir a "+document.getElementById('anTipo').value+"</button>"
-      +"<button class='btn' onclick=\"document.getElementById('iaRes').innerHTML=''\">Descartar</button></div></div>";
+    const m=txt.match(/\{[\s\S]*\}/); if(!m)throw new Error("La IA no devolvió JSON: "+lim(txt,120));
+    ultimo=JSON.parse(m[0]); IAQ=1; pintarIA();
   }catch(e){
     box.innerHTML="<div class='res' style='border-color:#5a2626'><h4 style='color:var(--warn)'>No se pudo analizar</h4>"
-      +"<p style='font-size:12.5px;color:var(--tx2)'>"+e.message+"</p>"+ayudaError(e.message)+"</div>";
+      +"<p style='font-size:12.5px;color:var(--tx2)'>"+lim(e.message,200)+"</p>"+ayudaError(e.message)+"</div>";
   }
+}
+function setQ(v){IAQ=Math.max(0.25,Math.min(50,Math.round(v*4)/4));pintarIA()}
+function sumQ(d){setQ(IAQ+d)}
+function inQ(v){const n=parseFloat((v||"").replace(",","."));if(!isNaN(n))setQ(n)}
+function plural(u,n){u=u||"porción";return Math.abs(n-1)<0.001?u:(/[sz]$/i.test(u)?u:u+"s")}
+function pintarIA(){
+  const d=ultimo; if(!d)return;
+  const u=lim(d.unidad,18)||"porción", ug=+d.unidad_g||0;
+  const k=(+d.kcal||0)*IAQ, p=(+d.p||0)*IAQ, c=(+d.c||0)*IAQ, g=(+d.g||0)*IAQ;
+  const nq=IAQ%1===0?IAQ:IAQ.toFixed(2).replace(/0$/,"");
+  const box=document.getElementById('iaRes');
+  box.innerHTML="<div class='res'><h4>"+lim(d.nombre,60)+"</h4>"
+   +"<div style='font-size:12px;color:var(--tx2)'>1 "+u+(ug?" ≈ "+ug+" g":"")+" = "+r(d.kcal)+" kcal"
+   +" · confianza "+lim(d.confianza,10)+"</div>"
+   +(d.porcion?"<div style='font-size:11.5px;color:var(--tx2);margin-top:2px'>"+lim(d.porcion,70)+"</div>":"")
+   +"<label style='margin-top:13px'>¿Cuántas "+plural(u,2)+" comiste?</label>"
+   +"<div class='qbtn'>"+[0.5,1,2,3,4].map(n=>"<button class='"+(Math.abs(IAQ-n)<0.001?"on":"")+"' onclick='setQ("+n+")'>"
+      +(n===0.5?"½":n)+"</button>").join("")+"</div>"
+   +"<div class='qbtn' style='margin-top:7px'>"
+   +"<button onclick='sumQ(-0.5)' style='flex:0 0 48px'>−</button>"
+   +"<input type='number' step='0.5' min='0.25' value='"+nq+"' oninput='inQ(this.value)' "
+   +"style='flex:1;text-align:center;font-size:17px;font-weight:700'>"
+   +"<button onclick='sumQ(0.5)' style='flex:0 0 48px'>+</button></div>"
+   +"<div class='res' style='margin-top:12px;padding:12px 13px;border-color:var(--acc2)'>"
+   +"<div style='font-size:11px;color:var(--tx2);text-transform:uppercase;letter-spacing:.6px;font-weight:600'>"
+   +nq+" "+plural(u,IAQ)+(ug?" · "+r(ug*IAQ)+" g":"")+"</div>"
+   +"<div class='cmeta' style='margin-top:5px;font-size:13px'><span><b style='font-size:22px'>"+r(k)+"</b> kcal</span>"
+   +"<span style='color:var(--p)'>P "+r(p)+"g</span><span style='color:var(--c)'>C "+r(c)+"g</span>"
+   +"<span style='color:var(--g)'>G "+r(g)+"g</span></div></div>"
+   +(d.items&&d.items.length&&IAQ===1?"<ul class='ing show'>"+d.items.map(i=>"<li><b>"+lim(i.nombre,40)+"</b><span class='gq'>"+i.g+" g</span></li>").join("")+"</ul>":"")
+   +(d.nota?"<p style='font-size:12px;color:var(--tx2);margin:9px 0 0'>"+lim(d.nota,140)+"</p>":"")
+   +"<div class='camctl'><button class='btn pri' onclick='guardarIA()' style='flex:2'>Añadir a "
+   +document.getElementById('anTipo').value+"</button>"
+   +"<button class='btn' onclick=\"ultimo=null;document.getElementById('iaRes').innerHTML=''\">Descartar</button></div></div>";
 }
 function guardarIA(){
   if(!ultimo)return;
-  push({nombre:ultimo.nombre,tipo:document.getElementById('anTipo').value,origen:'ia',
-    kcal:+ultimo.kcal||0,p:+ultimo.p||0,c:+ultimo.c||0,g:+ultimo.g||0,
-    items:(ultimo.items||[]).map(i=>({nombre:i.nombre,g:i.g}))});
+  const d=ultimo,u=lim(d.unidad,18)||"porción";
+  const nq=IAQ%1===0?IAQ:IAQ.toFixed(2).replace(/0$/,"");
+  push({nombre:lim(d.nombre,50)+" · "+nq+" "+plural(u,IAQ),tipo:document.getElementById('anTipo').value,origen:'ia',
+    kcal:(+d.kcal||0)*IAQ,p:(+d.p||0)*IAQ,c:(+d.c||0)*IAQ,g:(+d.g||0)*IAQ,
+    items:(d.items||[]).map(i=>({nombre:lim(i.nombre,40),g:Math.round((+i.g||0)*IAQ)}))});
   document.getElementById('iaRes').innerHTML="<div class='res' style='border-color:var(--acc2)'>Añadido a tu día ✓</div>";
-  ultimo=null;
+  ultimo=null; IAQ=1;
 }
 
 /* ================= PROGRESO ================= */
@@ -1128,8 +1169,8 @@ function renderDatos(){
    +"<div class='box'><h3>Lo que tienes guardado</h3><div class='stat'>"
    +"<div><b>"+nd+"</b><span>días</span></div><div><b>"+np+"</b><span>pesajes</span></div>"
    +"<div><b>"+nf+"</b><span>fotos</span></div><div><b>"+tamano()+"</b><span>KB</span></div></div>"
-   +"<div class='sync'>Versión <b>v6</b> · 6 de agosto de 2026. Si te falta algo que pediste, es que el navegador "
-   +"tiene guardada una versión vieja: recarga forzando (Ctrl+Shift+R) o abre la dirección con <b>?v=6</b> al final.</div></div>"
+   +"<div class='sync'>Versión <b>v7</b> · 6 de agosto de 2026. Si te falta algo que pediste, es que el navegador "
+   +"tiene guardada una versión vieja: recarga forzando (Ctrl+Shift+R) o abre la dirección con <b>?v=7</b> al final.</div></div>"
 
    +"<div class='box'><h3>Copia de seguridad</h3>"
    +"<p style='font-size:12.5px;color:var(--tx2);margin:0 0 11px'>Descarga un archivo con <b>todo</b>, fotos incluidas. "
