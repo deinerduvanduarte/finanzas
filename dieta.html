@@ -222,7 +222,7 @@ ol.pasos li{margin:7px 0} ol.pasos b{color:var(--tx)}
 <header>
  <div class="wrap">
   <h1>Definición · Duvan Álvarez</h1>
-  <div class="sub">82 kg · 1.76 m · Objetivo: perder grasa manteniendo músculo</div>
+  <div class="sub">82 kg · 1.76 m · Objetivo: perder grasa manteniendo músculo <span style="opacity:.55">· v6</span></div>
   <div class="datebar">
     <button class="btn" onclick="shiftDay(-1)">‹</button>
     <input type="date" id="fecha" onchange="setDate(this.value)">
@@ -1127,7 +1127,9 @@ function renderDatos(){
 
    +"<div class='box'><h3>Lo que tienes guardado</h3><div class='stat'>"
    +"<div><b>"+nd+"</b><span>días</span></div><div><b>"+np+"</b><span>pesajes</span></div>"
-   +"<div><b>"+nf+"</b><span>fotos</span></div><div><b>"+tamano()+"</b><span>KB</span></div></div></div>"
+   +"<div><b>"+nf+"</b><span>fotos</span></div><div><b>"+tamano()+"</b><span>KB</span></div></div>"
+   +"<div class='sync'>Versión <b>v6</b> · 6 de agosto de 2026. Si te falta algo que pediste, es que el navegador "
+   +"tiene guardada una versión vieja: recarga forzando (Ctrl+Shift+R) o abre la dirección con <b>?v=6</b> al final.</div></div>"
 
    +"<div class='box'><h3>Copia de seguridad</h3>"
    +"<p style='font-size:12.5px;color:var(--tx2);margin:0 0 11px'>Descarga un archivo con <b>todo</b>, fotos incluidas. "
