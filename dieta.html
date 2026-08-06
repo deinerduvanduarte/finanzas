@@ -266,20 +266,26 @@ ol.pasos li{margin:7px 0} ol.pasos b{color:var(--tx)}
 <section id="t-cam">
   <div class="note">
     <b>Cómo funciona.</b> Toma una foto del plato o de la tabla nutricional del empaque y la IA identifica
-    el alimento y estima calorías y macros. Necesita una API key de visión: se guarda solo en tu navegador
-    (localStorage), nunca se sube a GitHub ni se envía a ningún otro sitio.
+    el alimento y estima calorías y macros. La API key se guarda solo en tu navegador,
+    nunca se sube a GitHub.
+    <br><br><b>Empieza aquí:</b> entra a <b>aistudio.google.com/apikey</b>, inicia sesión con tu Google,
+    dale a <b>Create API key</b> y copia la clave que empieza por <b>AIza…</b>. Es gratis y no pide tarjeta.
+    Pégala abajo en «Configurar IA» y dale a <b>Probar conexión</b>.
   </div>
   <details id="cfgIA">
     <summary>Configurar IA</summary>
     <label>Proveedor</label>
-    <select id="prov" onchange="saveIA()">
-      <option value="gemini">Google Gemini (tiene capa gratuita)</option>
-      <option value="openai">OpenAI (GPT-4o-mini)</option>
+    <select id="prov" onchange="saveIA(true)">
+      <option value="gemini">Google Gemini · tiene capa gratuita</option>
+      <option value="openai">OpenAI</option>
       <option value="anthropic">Anthropic (Claude)</option>
     </select>
+    <label>Modelo</label>
+    <select id="modelo" onchange="saveIA()"></select>
     <label>API key</label>
     <input type="password" id="apikey" placeholder="Pega tu clave aquí" oninput="saveIA()">
     <p id="keyhelp"></p>
+    <div class="camctl"><button class="btn" id="bTest" onclick="probarIA()" style="flex:1">Probar conexión</button></div>
   </details>
 
   <div class="cam" id="camBox"><div class="ph">Cámara apagada<br>Pulsa «Abrir cámara» o «Subir foto»</div></div>
@@ -492,22 +498,39 @@ function addManual(){
 }
 
 /* ---------- Cámara + IA ---------- */
-const HELP={gemini:'Consigue una clave gratis en <b>aistudio.google.com/apikey</b>',
-  openai:'Consigue una clave en <b>platform.openai.com/api-keys</b>',
-  anthropic:'Consigue una clave en <b>console.anthropic.com</b>. Requiere activar CORS de navegador en tu cuenta.'};
-function saveIA(){ST.ia={prov:document.getElementById('prov').value,key:document.getElementById('apikey').value};save();
-  document.getElementById('keyhelp').innerHTML=HELP[ST.ia.prov]}
-function loadIA(){if(ST.ia&&ST.ia.prov)document.getElementById('prov').value=ST.ia.prov;
+const MODELOS={
+ gemini:[["gemini-3.5-flash-lite","Gemini 3.5 Flash-Lite · rápido y gratis"],
+         ["gemini-3.6-flash","Gemini 3.6 Flash · más preciso"],
+         ["gemini-3.1-flash-lite","Gemini 3.1 Flash-Lite"],
+         ["gemini-flash-latest","Siempre el Flash más nuevo"]],
+ openai:[["gpt-4o-mini","GPT-4o mini · económico"],["gpt-4o","GPT-4o · más preciso"]],
+ anthropic:[["claude-haiku-4-5-20251001","Claude Haiku 4.5 · rápido"],["claude-sonnet-5","Claude Sonnet 5 · más preciso"]]};
+const HELP={gemini:'Clave gratis en <b>aistudio.google.com/apikey</b> → Create API key. No pide tarjeta.',
+  openai:'Clave en <b>platform.openai.com/api-keys</b>. Es de pago por uso.',
+  anthropic:'Clave en <b>console.anthropic.com</b>. Requiere habilitar el acceso directo desde navegador.'};
+
+function modelosDe(p){const sel=document.getElementById('modelo');if(!sel)return;
+  const act=(ST.ia&&ST.ia.modelo)||MODELOS[p][0][0];
+  sel.innerHTML=MODELOS[p].map(m=>"<option value='"+m[0]+"'"+(m[0]===act?" selected":"")+">"+m[1]+"</option>").join("");
+  if(!MODELOS[p].some(m=>m[0]===act))sel.value=MODELOS[p][0][0];}
+function saveIA(cambioProv){
+  const p=document.getElementById('prov').value;
+  if(cambioProv){ST.ia=ST.ia||{};ST.ia.modelo=MODELOS[p][0][0];modelosDe(p)}
+  ST.ia={prov:p,key:document.getElementById('apikey').value.trim(),modelo:document.getElementById('modelo').value};
+  save();document.getElementById('keyhelp').innerHTML=HELP[p];}
+function loadIA(){
+  const p=(ST.ia&&ST.ia.prov)||'gemini';
+  document.getElementById('prov').value=p; modelosDe(p);
   if(ST.ia&&ST.ia.key)document.getElementById('apikey').value=ST.ia.key;
-  document.getElementById('keyhelp').innerHTML=HELP[document.getElementById('prov').value];
-  if(!(ST.ia&&ST.ia.key))document.getElementById('cfgIA').open=true}
+  document.getElementById('keyhelp').innerHTML=HELP[p];
+  if(!(ST.ia&&ST.ia.key))document.getElementById('cfgIA').open=true;}
 
 async function openCam(){
   try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1280}}});
     document.getElementById('camBox').innerHTML="<video id='vid' autoplay playsinline muted></video>";
     document.getElementById('vid').srcObject=stream;
     document.getElementById('bShot').disabled=false;
-  }catch(e){alert("No pude abrir la cámara: "+e.message+"\n\nUsa «Subir foto». Recuerda que la cámara solo funciona en https (GitHub Pages lo es) o en localhost.")}
+  }catch(e){alert("No pude abrir la cámara: "+e.message+"\n\nUsa «Subir foto». La cámara solo funciona en https (GitHub Pages lo es) o en localhost.")}
 }
 function closeCam(){if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
   document.getElementById('camBox').innerHTML="<div class='ph'>Cámara apagada</div>";
@@ -533,53 +556,109 @@ Si es un PLATO DE COMIDA, identifica cada alimento y estima el peso en gramos ob
 Responde SOLO con JSON válido, sin texto extra, sin markdown, con este formato exacto:
 {"nombre":"nombre corto del plato o producto","porcion":"descripción de la porción analizada","kcal":000,"p":00,"c":00,"g":00,"items":[{"nombre":"alimento","g":000}],"confianza":"alta|media|baja","nota":"una frase breve"}
 Los valores kcal,p,c,g son números para la porción total analizada.`;
+const ESQUEMA={type:"object",properties:{
+  nombre:{type:"string"},porcion:{type:"string"},kcal:{type:"number"},
+  p:{type:"number"},c:{type:"number"},g:{type:"number"},
+  items:{type:"array",items:{type:"object",properties:{nombre:{type:"string"},g:{type:"number"}},required:["nombre","g"]}},
+  confianza:{type:"string"},nota:{type:"string"}},required:["nombre","kcal","p","c","g"]};
+
+function sacarTexto(j){
+  if(typeof j.output_text==="string")return j.output_text;
+  if(typeof j.outputText==="string")return j.outputText;
+  let out="";
+  const walk=n=>{if(!n||typeof n!=="object")return;
+    if(Array.isArray(n)){n.forEach(walk);return}
+    if(typeof n.text==="string"){out+=n.text;return}
+    Object.keys(n).forEach(k=>walk(n[k]))};
+  walk(j.steps||j.output||j.candidates||j);
+  return out;
+}
+function errDe(j){return j&&j.error?(j.error.message||JSON.stringify(j.error)):null}
+
+async function llamarIA(partes,jsonEstricto){
+  const p=document.getElementById('prov').value,key=document.getElementById('apikey').value.trim();
+  const modelo=document.getElementById('modelo').value;
+  if(p==="gemini"){
+    const input=[{type:"text",text:partes.texto}];
+    if(partes.b64)input.push({type:"image",data:partes.b64,mime_type:"image/jpeg"});
+    const body={model:modelo,input:input};
+    if(jsonEstricto)body.response_format={type:"text",mime_type:"application/json",schema:ESQUEMA};
+    const rq=await fetch("https://generativelanguage.googleapis.com/v1beta/interactions",
+      {method:"POST",headers:{"Content-Type":"application/json","x-goog-api-key":key},body:JSON.stringify(body)});
+    const j=await rq.json(); const e=errDe(j); if(e)throw new Error(e);
+    return sacarTexto(j);
+  }
+  if(p==="openai"){
+    const cont=[{type:"text",text:partes.texto}];
+    if(partes.b64)cont.push({type:"image_url",image_url:{url:"data:image/jpeg;base64,"+partes.b64}});
+    const body={model:modelo,temperature:0.2,messages:[{role:"user",content:cont}]};
+    if(jsonEstricto)body.response_format={type:"json_object"};
+    const rq=await fetch("https://api.openai.com/v1/chat/completions",
+      {method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},body:JSON.stringify(body)});
+    const j=await rq.json(); const e=errDe(j); if(e)throw new Error(e);
+    return j.choices[0].message.content;
+  }
+  const cont=[];
+  if(partes.b64)cont.push({type:"image",source:{type:"base64",media_type:"image/jpeg",data:partes.b64}});
+  cont.push({type:"text",text:partes.texto});
+  const rq=await fetch("https://api.anthropic.com/v1/messages",
+    {method:"POST",headers:{"Content-Type":"application/json","x-api-key":key,
+      "anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+     body:JSON.stringify({model:modelo,max_tokens:900,messages:[{role:"user",content:cont}]})});
+  const j=await rq.json(); const e=errDe(j); if(e)throw new Error(e);
+  return j.content[0].text;
+}
+
+async function probarIA(){
+  const key=document.getElementById('apikey').value.trim();
+  const box=document.getElementById('iaRes');
+  if(!key){document.getElementById('cfgIA').open=true;box.innerHTML="<div class='res'>Primero pega tu API key.</div>";return}
+  const b=document.getElementById('bTest');b.disabled=true;b.innerHTML="<span class='spin'></span>Probando";
+  box.innerHTML="";
+  try{
+    const t=await llamarIA({texto:"Responde exactamente: listo"},false);
+    box.innerHTML="<div class='res' style='border-color:var(--acc2)'><h4 style='color:var(--acc)'>Conexión correcta ✓</h4>"
+      +"<p style='font-size:12.5px;color:var(--tx2);margin:4px 0 0'>La IA respondió: «"+(t||"").trim().slice(0,60)+"». Ya puedes analizar fotos.</p></div>";
+  }catch(e){
+    box.innerHTML="<div class='res' style='border-color:#5a2626'><h4 style='color:var(--warn)'>No conecta</h4>"
+      +"<p style='font-size:12.5px;color:var(--tx2)'>"+e.message+"</p>"+ayudaError(e.message)+"</div>";
+  }
+  b.disabled=false;b.textContent="Probar conexión";
+}
+function ayudaError(m){
+  m=(m||"").toLowerCase();
+  if(m.indexOf("api key not valid")>=0||m.indexOf("api_key_invalid")>=0||m.indexOf("unauthor")>=0||m.indexOf("401")>=0)
+    return "<p style='font-size:12px;color:var(--tx2)'>La clave está mal copiada o fue revocada. Genera una nueva en aistudio.google.com/apikey.</p>";
+  if(m.indexOf("not found")>=0||m.indexOf("404")>=0)
+    return "<p style='font-size:12px;color:var(--tx2)'>Ese modelo ya no existe o no está disponible para tu clave. Elige otro en la lista de arriba.</p>";
+  if(m.indexOf("quota")>=0||m.indexOf("rate")>=0||m.indexOf("429")>=0)
+    return "<p style='font-size:12px;color:var(--tx2)'>Pasaste el límite gratuito por minuto. Espera un minuto y vuelve a intentar.</p>";
+  if(m.indexOf("failed to fetch")>=0||m.indexOf("networkerror")>=0)
+    return "<p style='font-size:12px;color:var(--tx2)'>No hubo respuesta. Revisa tu conexión, y que estés abriendo la app por https y no como archivo local.</p>";
+  return "<p style='font-size:12px;color:var(--tx2)'>Revisa la clave y el modelo elegido.</p>";
+}
 
 async function analizar(){
-  const prov=document.getElementById('prov').value, key=document.getElementById('apikey').value.trim();
+  const key=document.getElementById('apikey').value.trim();
   if(!key){document.getElementById('cfgIA').open=true;alert("Primero pega tu API key en «Configurar IA».");return}
   if(!imgB64)return;
   const box=document.getElementById('iaRes');
   box.innerHTML="<div class='res'><span class='spin'></span>Analizando la imagen…</div>";
-  const b64=imgB64.split(',')[1];
   try{
-    let txt;
-    if(prov==='gemini'){
-      const rq=await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key="+encodeURIComponent(key),
-        {method:"POST",headers:{"Content-Type":"application/json"},
-         body:JSON.stringify({contents:[{parts:[{text:PROMPT},{inline_data:{mime_type:"image/jpeg",data:b64}}]}],
-           generationConfig:{temperature:0.2,responseMimeType:"application/json"}})});
-      const j=await rq.json(); if(j.error)throw new Error(j.error.message);
-      txt=j.candidates[0].content.parts[0].text;
-    }else if(prov==='openai'){
-      const rq=await fetch("https://api.openai.com/v1/chat/completions",
-        {method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},
-         body:JSON.stringify({model:"gpt-4o-mini",temperature:0.2,response_format:{type:"json_object"},
-           messages:[{role:"user",content:[{type:"text",text:PROMPT},{type:"image_url",image_url:{url:imgB64}}]}]})});
-      const j=await rq.json(); if(j.error)throw new Error(j.error.message);
-      txt=j.choices[0].message.content;
-    }else{
-      const rq=await fetch("https://api.anthropic.com/v1/messages",
-        {method:"POST",headers:{"Content-Type":"application/json","x-api-key":key,
-          "anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
-         body:JSON.stringify({model:"claude-3-5-haiku-latest",max_tokens:800,
-           messages:[{role:"user",content:[{type:"image",source:{type:"base64",media_type:"image/jpeg",data:b64}},{type:"text",text:PROMPT}]}]})});
-      const j=await rq.json(); if(j.error)throw new Error(j.error.message);
-      txt=j.content[0].text;
-    }
-    const m=txt.match(/\{[\s\S]*\}/); if(!m)throw new Error("La IA no devolvió JSON: "+txt.slice(0,120));
+    const txt=await llamarIA({texto:PROMPT,b64:imgB64.split(',')[1]},true);
+    const m=txt.match(/\{[\s\S]*\}/); if(!m)throw new Error("La IA no devolvió JSON: "+(txt||"").slice(0,120));
     const d=JSON.parse(m[0]); ultimo=d;
     box.innerHTML="<div class='res'><h4>"+(d.nombre||"Alimento")+"</h4>"
       +"<div style='font-size:12px;color:var(--tx2)'>"+(d.porcion||"")+" · confianza "+(d.confianza||"media")+"</div>"
       +"<div class='cmeta' style='margin-top:9px;font-size:13px'><span><b style='font-size:19px'>"+r(d.kcal)+"</b> kcal</span>"
       +"<span style='color:var(--p)'>P "+r(d.p||0)+"g</span><span style='color:var(--c)'>C "+r(d.c||0)+"g</span><span style='color:var(--g)'>G "+r(d.g||0)+"g</span></div>"
-      +(d.items&&d.items.length?"<ul class='ing show'>"+d.items.map(i=>"<li><b>"+i.nombre+"</b><span>"+i.g+" g</span></li>").join("")+"</ul>":"")
+      +(d.items&&d.items.length?"<ul class='ing show'>"+d.items.map(i=>"<li><b>"+i.nombre+"</b><span class='gq'>"+i.g+" g</span></li>").join("")+"</ul>":"")
       +(d.nota?"<p style='font-size:12px;color:var(--tx2);margin:9px 0 0'>"+d.nota+"</p>":"")
       +"<div class='camctl'><button class='btn pri' onclick='guardarIA()'>Añadir a "+document.getElementById('anTipo').value+"</button>"
       +"<button class='btn' onclick=\"document.getElementById('iaRes').innerHTML=''\">Descartar</button></div></div>";
   }catch(e){
     box.innerHTML="<div class='res' style='border-color:#5a2626'><h4 style='color:var(--warn)'>No se pudo analizar</h4>"
-      +"<p style='font-size:12.5px;color:var(--tx2)'>"+e.message+"</p>"
-      +"<p style='font-size:12px;color:var(--tx2)'>Revisa que la API key sea correcta y tenga saldo. Si usas Anthropic, activa el acceso directo desde navegador en tu consola.</p></div>";
+      +"<p style='font-size:12.5px;color:var(--tx2)'>"+e.message+"</p>"+ayudaError(e.message)+"</div>";
   }
 }
 function guardarIA(){
@@ -590,7 +669,6 @@ function guardarIA(){
   document.getElementById('iaRes').innerHTML="<div class='res' style='border-color:var(--acc2)'>Añadido a tu día ✓</div>";
   ultimo=null;
 }
-
 
 /* ================= PROGRESO ================= */
 const ACT=[[1.2,"Sedentario · sin entreno"],[1.375,"Ligero · 3 días/semana"],[1.55,"Moderado · 5 días/semana"],[1.725,"Alto · 6–7 días"],[1.9,"Muy alto · doble sesión"]];
