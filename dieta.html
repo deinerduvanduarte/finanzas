@@ -138,6 +138,55 @@ tbody tr{cursor:pointer} tbody tr:hover{background:var(--bg3)}
   width:100%;max-width:820px;max-height:88vh;overflow:auto}
 .sheet h3{margin:0 0 12px;font-size:16px}
 .empty{text-align:center;color:var(--tx2);font-size:13px;padding:26px 14px;border:1px dashed var(--line);border-radius:var(--r)}
+/* progreso */
+.pcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:9px;margin-bottom:12px}
+.pc{background:var(--bg2);border:1px solid var(--line);border-radius:var(--r);padding:12px}
+.pc .lb{font-size:10px;color:var(--tx2);text-transform:uppercase;letter-spacing:.6px;font-weight:600}
+.pc .vl{font-size:23px;font-weight:700;margin-top:3px;letter-spacing:-.5px;line-height:1.1}
+.pc .vl small{font-size:11px;color:var(--tx2);font-weight:400;letter-spacing:0}
+.pc .sm{font-size:11px;color:var(--tx2);margin-top:2px}
+.up{color:var(--warn)} .down{color:var(--acc)}
+.box{background:var(--bg2);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:12px}
+.box h3{margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.8px;color:var(--tx2);font-weight:700}
+.alert{background:rgba(248,81,73,.09);border:1px solid #5a2626;border-radius:var(--r);padding:13px;margin-bottom:12px;font-size:13px}
+.alert b{color:#ff9b95}
+.ok{background:rgba(63,185,80,.09);border-color:#1d4d2a}
+.ok b{color:var(--acc)}
+.gauge{height:8px;background:var(--bg3);border-radius:99px;overflow:hidden;margin-top:7px;display:flex}
+.gauge i{display:block;height:100%}
+.hist{list-style:none;padding:0;margin:0;max-height:290px;overflow:auto}
+.hist li{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px}
+.hist li:last-child{border:none}
+.hist .f{color:var(--tx2);font-size:12px;width:96px;flex-shrink:0}
+.hist .k{font-weight:600;font-variant-numeric:tabular-nums}
+.hist .dd{margin-left:auto;font-size:12px;font-variant-numeric:tabular-nums}
+.fotos{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px}
+.foto{position:relative;border-radius:10px;overflow:hidden;border:1px solid var(--line);aspect-ratio:3/4;background:var(--bg3)}
+.foto img{width:100%;height:100%;object-fit:cover;display:block}
+.foto span{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(transparent,rgba(0,0,0,.85));
+  color:#fff;font-size:10px;padding:14px 6px 4px;text-align:center}
+.foto button{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.65);border:none;color:#fff;
+  width:22px;height:22px;border-radius:50%;font-size:14px;cursor:pointer;line-height:1}
+svg.ch{width:100%;height:auto;display:block;overflow:visible}
+/* reemplazos */
+.ing li{display:flex;align-items:center;gap:8px;justify-content:flex-start}
+.ing li .gq{margin-left:auto;flex-shrink:0;font-variant-numeric:tabular-nums}
+.ing li em{font-style:normal;font-size:10.5px;color:var(--acc);white-space:nowrap}
+.sw{background:var(--bg3);border:1px solid var(--line);color:var(--tx2);border-radius:7px;
+  min-width:27px;height:25px;font-size:12px;cursor:pointer;flex-shrink:0;padding:0;font-family:inherit}
+.sw:hover{border-color:var(--acc);color:var(--tx)}
+.alt{display:flex;align-items:center;gap:10px;padding:10px 11px;border:1px solid var(--line);
+  border-radius:11px;margin-bottom:7px;cursor:pointer;background:var(--bg3);transition:.15s}
+.alt:hover{border-color:var(--acc);background:#252d38}
+.alt .n{flex:1;min-width:0}
+.alt .n b{display:block;font-size:14px;font-weight:600}
+.alt .n span{font-size:11.5px;color:var(--tx2)}
+.alt .q{text-align:right;flex-shrink:0}
+.alt .q b{display:block;font-size:15px;font-variant-numeric:tabular-nums}
+.alt .q span{font-size:11px;color:var(--tx2)}
+.orig{background:var(--bg3);border:1px solid var(--line);border-radius:11px;padding:11px;margin-bottom:12px}
+.orig b{font-size:15px} .orig div{font-size:12px;color:var(--tx2);margin-top:2px}
+.grphd{font-size:10.5px;color:var(--tx2);text-transform:uppercase;letter-spacing:.9px;font-weight:700;padding-top:16px}
 @media(max-width:520px){.macros{gap:7px}.kcal b{font-size:28px}}
 </style>
 </head>
@@ -155,7 +204,7 @@ tbody tr{cursor:pointer} tbody tr:hover{background:var(--bg3)}
   </div>
   <div class="prog">
     <div class="kcal">
-      <b id="pk">0</b><span class="of">/ 2200–2400 kcal</span>
+      <b id="pk">0</b><span class="of" id="pobj">/ 2200–2400 kcal</span>
       <span class="rest" id="prest"></span>
     </div>
     <div class="bar" id="pbar"><i style="width:0"></i><div class="zone" style="left:91.7%"></div><div class="zone" style="left:100%"></div></div>
@@ -168,6 +217,7 @@ tbody tr{cursor:pointer} tbody tr:hover{background:var(--bg3)}
   <nav>
     <button class="on" onclick="tab(this,'t-hoy')">Hoy</button>
     <button onclick="tab(this,'t-sem')">Semana</button>
+    <button onclick="tab(this,'t-prog')">Progreso</button>
     <button onclick="tab(this,'t-cam')">Cámara IA</button>
     <button onclick="tab(this,'t-ali')">Alimentos</button>
     <button onclick="tab(this,'t-guia')">Guía</button>
@@ -180,6 +230,10 @@ tbody tr{cursor:pointer} tbody tr:hover{background:var(--bg3)}
 <section id="t-hoy" class="on"><div id="hoyBox"></div></section>
 
 <section id="t-sem"><div id="semBox"></div></section>
+
+<section id="t-prog">
+  <div id="progBox"></div>
+</section>
 
 <section id="t-cam">
   <div class="note">
@@ -216,7 +270,9 @@ tbody tr{cursor:pointer} tbody tr:hover{background:var(--bg3)}
 </section>
 
 <section id="t-ali">
-  <div class="note">Valores por 100 g (alimento ya cocido/listo). Toca una fila para añadirla a tu día.</div>
+  <div class="note">Valores por 100 g, alimento ya cocido y listo. <b>Los alimentos de un mismo grupo se pueden
+    intercambiar</b>: en la pestaña Hoy, abre «Ver porciones y reemplazos» y toca el botón ⇄ de cualquier ingrediente
+    para ver por cuál cambiarlo y en qué cantidad. Toca una fila aquí para añadir ese alimento a tu día.</div>
   <table><thead><tr><th>Alimento</th><th>kcal</th><th>P</th><th>C</th><th>G</th></tr></thead><tbody id="tbAli"></tbody></table>
 </section>
 
@@ -225,6 +281,10 @@ tbody tr{cursor:pointer} tbody tr:hover{background:var(--bg3)}
 </div>
 
 <button class="fab" onclick="openAdd()">+</button>
+
+<div class="modal" id="mSwap" onclick="if(event.target===this)closeSwap()">
+ <div class="sheet" id="swBody"></div>
+</div>
 
 <div class="modal" id="mAdd" onclick="if(event.target===this)closeAdd()">
  <div class="sheet">
@@ -247,16 +307,17 @@ tbody tr{cursor:pointer} tbody tr:hover{background:var(--bg3)}
 </div>
 
 <script>
-const DATA = {"foods":{"huevo":{"nombre":"Huevo entero","kcal":143,"p":12.6,"c":0.7,"g":9.5},"clara":{"nombre":"Clara de huevo","kcal":52,"p":11.0,"c":0.7,"g":0.2},"avena":{"nombre":"Avena en hojuelas","kcal":389,"p":16.9,"c":66.3,"g":6.9},"pollo":{"nombre":"Pechuga de pollo","kcal":165,"p":31.0,"c":0.0,"g":3.6},"papa":{"nombre":"Papa blanca cocida","kcal":87,"p":2.0,"c":20.0,"g":0.1},"criolla":{"nombre":"Papa criolla cocida","kcal":95,"p":2.2,"c":21.0,"g":0.2},"arroz":{"nombre":"Arroz blanco cocido","kcal":130,"p":2.7,"c":28.0,"g":0.3},"yogur":{"nombre":"Yogur griego natural","kcal":59,"p":10.0,"c":3.6,"g":0.4},"carne":{"nombre":"Carne magra de res","kcal":187,"p":30.0,"c":0.0,"g":7.0},"pescado":{"nombre":"Pescado blanco","kcal":128,"p":26.0,"c":0.0,"g":2.7},"atun":{"nombre":"Atún en agua","kcal":116,"p":26.0,"c":0.0,"g":0.8},"pavo":{"nombre":"Pechuga de pavo","kcal":135,"p":29.0,"c":0.0,"g":1.7},"cerdo":{"nombre":"Lomo de cerdo","kcal":173,"p":30.0,"c":0.0,"g":5.0},"brocoli":{"nombre":"Brócoli cocido","kcal":35,"p":2.4,"c":7.0,"g":0.4},"ensalada":{"nombre":"Ensalada mixta","kcal":18,"p":1.0,"c":3.5,"g":0.2},"espinaca":{"nombre":"Espinaca","kcal":23,"p":2.9,"c":3.6,"g":0.4},"banano":{"nombre":"Banano","kcal":89,"p":1.1,"c":23.0,"g":0.3},"manzana":{"nombre":"Manzana","kcal":52,"p":0.3,"c":14.0,"g":0.2},"naranja":{"nombre":"Naranja","kcal":47,"p":0.9,"c":12.0,"g":0.1},"aguacate":{"nombre":"Aguacate","kcal":160,"p":2.0,"c":9.0,"g":15.0},"almendras":{"nombre":"Almendras","kcal":579,"p":21.0,"c":22.0,"g":50.0},"whey":{"nombre":"Proteína whey","kcal":380,"p":78.0,"c":8.0,"g":4.0},"pan":{"nombre":"Pan integral","kcal":247,"p":13.0,"c":41.0,"g":3.4},"arepa":{"nombre":"Arepa de maíz","kcal":195,"p":4.0,"c":40.0,"g":2.0},"aceite":{"nombre":"Aceite de oliva","kcal":884,"p":0.0,"c":0.0,"g":100.0},"leche":{"nombre":"Leche descremada","kcal":35,"p":3.4,"c":5.0,"g":0.2}},"menu":{"Lunes":[{"tipo":"Desayuno","nombre":"Huevos + avena","items":[{"id":"huevo","nombre":"Huevo entero","g":150},{"id":"clara","nombre":"Clara de huevo","g":66},{"id":"avena","nombre":"Avena en hojuelas","g":70},{"id":"banano","nombre":"Banano","g":100}],"kcal":610,"p":39,"c":71,"g":20},{"tipo":"Almuerzo","nombre":"Pollo + papa","items":[{"id":"pollo","nombre":"Pechuga de pollo","g":170},{"id":"papa","nombre":"Papa blanca cocida","g":410},{"id":"ensalada","nombre":"Ensalada mixta","g":120},{"id":"aceite","nombre":"Aceite de oliva","g":8},{"id":"aguacate","nombre":"Aguacate","g":40}],"kcal":794,"p":63,"c":90,"g":21},{"tipo":"Snack","nombre":"Yogur griego","items":[{"id":"yogur","nombre":"Yogur griego natural","g":200},{"id":"almendras","nombre":"Almendras","g":20}],"kcal":234,"p":24,"c":12,"g":11},{"tipo":"Cena","nombre":"Carne + verduras","items":[{"id":"carne","nombre":"Carne magra de res","g":150},{"id":"brocoli","nombre":"Brócoli cocido","g":200},{"id":"papa","nombre":"Papa blanca cocida","g":200},{"id":"aceite","nombre":"Aceite de oliva","g":5}],"kcal":569,"p":54,"c":54,"g":16}],"Martes":[{"tipo":"Desayuno","nombre":"Yogur + fruta","items":[{"id":"yogur","nombre":"Yogur griego natural","g":250},{"id":"avena","nombre":"Avena en hojuelas","g":50},{"id":"banano","nombre":"Banano","g":100},{"id":"almendras","nombre":"Almendras","g":25}],"kcal":576,"p":40,"c":71,"g":17},{"tipo":"Almuerzo","nombre":"Carne + arroz","items":[{"id":"carne","nombre":"Carne magra de res","g":165},{"id":"arroz","nombre":"Arroz blanco cocido","g":220},{"id":"ensalada","nombre":"Ensalada mixta","g":120},{"id":"aceite","nombre":"Aceite de oliva","g":12},{"id":"aguacate","nombre":"Aguacate","g":60}],"kcal":818,"p":58,"c":71,"g":33},{"tipo":"Snack","nombre":"Batido de proteína","items":[{"id":"whey","nombre":"Proteína whey","g":25},{"id":"manzana","nombre":"Manzana","g":180}],"kcal":189,"p":20,"c":27,"g":1},{"tipo":"Cena","nombre":"Pescado + papa","items":[{"id":"pescado","nombre":"Pescado blanco","g":200},{"id":"papa","nombre":"Papa blanca cocida","g":300},{"id":"brocoli","nombre":"Brócoli cocido","g":150},{"id":"aceite","nombre":"Aceite de oliva","g":6}],"kcal":623,"p":62,"c":70,"g":12}],"Miércoles":[{"tipo":"Desayuno","nombre":"Pollo + papa","items":[{"id":"pollo","nombre":"Pechuga de pollo","g":130},{"id":"papa","nombre":"Papa blanca cocida","g":300},{"id":"huevo","nombre":"Huevo entero","g":100},{"id":"aceite","nombre":"Aceite de oliva","g":5}],"kcal":663,"p":59,"c":61,"g":19},{"tipo":"Almuerzo","nombre":"Pavo + arroz","items":[{"id":"pavo","nombre":"Pechuga de pavo","g":160},{"id":"arroz","nombre":"Arroz blanco cocido","g":250},{"id":"ensalada","nombre":"Ensalada mixta","g":120},{"id":"aguacate","nombre":"Aguacate","g":70}],"kcal":675,"p":56,"c":80,"g":14},{"tipo":"Snack","nombre":"Fruta + almendras","items":[{"id":"naranja","nombre":"Naranja","g":200},{"id":"almendras","nombre":"Almendras","g":25}],"kcal":239,"p":7,"c":30,"g":13},{"tipo":"Cena","nombre":"Pollo + ensalada","items":[{"id":"pollo","nombre":"Pechuga de pollo","g":160},{"id":"ensalada","nombre":"Ensalada mixta","g":150},{"id":"criolla","nombre":"Papa criolla cocida","g":280},{"id":"aceite","nombre":"Aceite de oliva","g":12}],"kcal":663,"p":57,"c":64,"g":19}],"Jueves":[{"tipo":"Desayuno","nombre":"Huevos + pan","items":[{"id":"huevo","nombre":"Huevo entero","g":150},{"id":"clara","nombre":"Clara de huevo","g":66},{"id":"pan","nombre":"Pan integral","g":100},{"id":"aguacate","nombre":"Aguacate","g":60}],"kcal":592,"p":40,"c":48,"g":27},{"tipo":"Almuerzo","nombre":"Cerdo + papa","items":[{"id":"cerdo","nombre":"Lomo de cerdo","g":155},{"id":"papa","nombre":"Papa blanca cocida","g":400},{"id":"ensalada","nombre":"Ensalada mixta","g":120},{"id":"aceite","nombre":"Aceite de oliva","g":6}],"kcal":691,"p":56,"c":84,"g":14},{"tipo":"Snack","nombre":"Yogur + fruta","items":[{"id":"yogur","nombre":"Yogur griego natural","g":200},{"id":"banano","nombre":"Banano","g":100},{"id":"almendras","nombre":"Almendras","g":20}],"kcal":323,"p":25,"c":35,"g":11},{"tipo":"Cena","nombre":"Atún + papa","items":[{"id":"atun","nombre":"Atún en agua","g":180},{"id":"papa","nombre":"Papa blanca cocida","g":300},{"id":"espinaca","nombre":"Espinaca","g":150},{"id":"aceite","nombre":"Aceite de oliva","g":10},{"id":"naranja","nombre":"Naranja","g":100}],"kcal":640,"p":58,"c":77,"g":12}],"Viernes":[{"tipo":"Desayuno","nombre":"Avena + huevos","items":[{"id":"avena","nombre":"Avena en hojuelas","g":70},{"id":"huevo","nombre":"Huevo entero","g":150},{"id":"clara","nombre":"Clara de huevo","g":66},{"id":"leche","nombre":"Leche descremada","g":200}],"kcal":591,"p":45,"c":58,"g":20},{"tipo":"Almuerzo","nombre":"Pollo + arroz","items":[{"id":"pollo","nombre":"Pechuga de pollo","g":180},{"id":"arroz","nombre":"Arroz blanco cocido","g":250},{"id":"ensalada","nombre":"Ensalada mixta","g":120},{"id":"aceite","nombre":"Aceite de oliva","g":8},{"id":"aguacate","nombre":"Aguacate","g":50}],"kcal":794,"p":65,"c":79,"g":23},{"tipo":"Snack","nombre":"Manzana + almendras","items":[{"id":"manzana","nombre":"Manzana","g":180},{"id":"almendras","nombre":"Almendras","g":25}],"kcal":238,"p":6,"c":31,"g":13},{"tipo":"Cena","nombre":"Pescado + verduras","items":[{"id":"pescado","nombre":"Pescado blanco","g":200},{"id":"brocoli","nombre":"Brócoli cocido","g":200},{"id":"papa","nombre":"Papa blanca cocida","g":270},{"id":"aceite","nombre":"Aceite de oliva","g":6}],"kcal":614,"p":62,"c":68,"g":12}],"Sábado":[{"tipo":"Desayuno","nombre":"Yogur + avena","items":[{"id":"yogur","nombre":"Yogur griego natural","g":250},{"id":"avena","nombre":"Avena en hojuelas","g":70},{"id":"banano","nombre":"Banano","g":100}],"kcal":509,"p":38,"c":78,"g":6},{"tipo":"Almuerzo","nombre":"Carne + papa","items":[{"id":"carne","nombre":"Carne magra de res","g":180},{"id":"papa","nombre":"Papa blanca cocida","g":350},{"id":"ensalada","nombre":"Ensalada mixta","g":120},{"id":"aceite","nombre":"Aceite de oliva","g":8},{"id":"aguacate","nombre":"Aguacate","g":50}],"kcal":813,"p":63,"c":79,"g":29},{"tipo":"Snack","nombre":"Almendras + manzana","items":[{"id":"almendras","nombre":"Almendras","g":30},{"id":"manzana","nombre":"Manzana","g":180}],"kcal":267,"p":7,"c":32,"g":15},{"tipo":"Cena","nombre":"Pollo + ensalada","items":[{"id":"pollo","nombre":"Pechuga de pollo","g":200},{"id":"ensalada","nombre":"Ensalada mixta","g":150},{"id":"arroz","nombre":"Arroz blanco cocido","g":160},{"id":"aceite","nombre":"Aceite de oliva","g":8}],"kcal":636,"p":68,"c":50,"g":16}],"Domingo":[{"tipo":"Desayuno","nombre":"Huevos + arepa","items":[{"id":"huevo","nombre":"Huevo entero","g":150},{"id":"clara","nombre":"Clara de huevo","g":66},{"id":"arepa","nombre":"Arepa de maíz","g":120},{"id":"aguacate","nombre":"Aguacate","g":70}],"kcal":595,"p":32,"c":56,"g":27},{"tipo":"Almuerzo","nombre":"Pescado + arroz","items":[{"id":"pescado","nombre":"Pescado blanco","g":210},{"id":"arroz","nombre":"Arroz blanco cocido","g":250},{"id":"ensalada","nombre":"Ensalada mixta","g":120},{"id":"aceite","nombre":"Aceite de oliva","g":10}],"kcal":704,"p":63,"c":74,"g":17},{"tipo":"Snack","nombre":"Batido de proteína","items":[{"id":"whey","nombre":"Proteína whey","g":30},{"id":"banano","nombre":"Banano","g":100},{"id":"almendras","nombre":"Almendras","g":15}],"kcal":290,"p":28,"c":29,"g":9},{"tipo":"Cena","nombre":"Carne + verduras","items":[{"id":"carne","nombre":"Carne magra de res","g":155},{"id":"brocoli","nombre":"Brócoli cocido","g":200},{"id":"papa","nombre":"Papa blanca cocida","g":290},{"id":"aceite","nombre":"Aceite de oliva","g":3}],"kcal":639,"p":57,"c":72,"g":15}]}};
+const DATA = {"foods":{"huevo":{"nombre":"Huevo entero","kcal":143,"p":12.6,"c":0.7,"g":9.5,"gr":"prote"},"clara":{"nombre":"Clara de huevo","kcal":52,"p":11.0,"c":0.7,"g":0.2,"gr":"prote"},"avena":{"nombre":"Avena en hojuelas","kcal":389,"p":16.9,"c":66.3,"g":6.9,"gr":"carbo"},"pollo":{"nombre":"Pechuga de pollo","kcal":165,"p":31.0,"c":0.0,"g":3.6,"gr":"prote"},"papa":{"nombre":"Papa blanca cocida","kcal":87,"p":2.0,"c":20.0,"g":0.1,"gr":"carbo"},"criolla":{"nombre":"Papa criolla cocida","kcal":95,"p":2.2,"c":21.0,"g":0.2,"gr":"carbo"},"arroz":{"nombre":"Arroz blanco cocido","kcal":130,"p":2.7,"c":28.0,"g":0.3,"gr":"carbo"},"yogur":{"nombre":"Yogur griego natural","kcal":59,"p":10.0,"c":3.6,"g":0.4,"gr":"prote"},"carne":{"nombre":"Carne magra de res","kcal":187,"p":30.0,"c":0.0,"g":7.0,"gr":"prote"},"pescado":{"nombre":"Pescado blanco","kcal":128,"p":26.0,"c":0.0,"g":2.7,"gr":"prote"},"atun":{"nombre":"Atún en agua","kcal":116,"p":26.0,"c":0.0,"g":0.8,"gr":"prote"},"pavo":{"nombre":"Pechuga de pavo","kcal":135,"p":29.0,"c":0.0,"g":1.7,"gr":"prote"},"cerdo":{"nombre":"Lomo de cerdo","kcal":173,"p":30.0,"c":0.0,"g":5.0,"gr":"prote"},"brocoli":{"nombre":"Brócoli cocido","kcal":35,"p":2.4,"c":7.0,"g":0.4,"gr":"verdura"},"ensalada":{"nombre":"Ensalada mixta","kcal":18,"p":1.0,"c":3.5,"g":0.2,"gr":"verdura"},"espinaca":{"nombre":"Espinaca","kcal":23,"p":2.9,"c":3.6,"g":0.4,"gr":"verdura"},"banano":{"nombre":"Banano","kcal":89,"p":1.1,"c":23.0,"g":0.3,"gr":"fruta"},"manzana":{"nombre":"Manzana","kcal":52,"p":0.3,"c":14.0,"g":0.2,"gr":"fruta"},"naranja":{"nombre":"Naranja","kcal":47,"p":0.9,"c":12.0,"g":0.1,"gr":"fruta"},"aguacate":{"nombre":"Aguacate","kcal":160,"p":2.0,"c":9.0,"g":15.0,"gr":"grasa"},"almendras":{"nombre":"Almendras","kcal":579,"p":21.0,"c":22.0,"g":50.0,"gr":"grasa"},"whey":{"nombre":"Proteína whey","kcal":380,"p":78.0,"c":8.0,"g":4.0,"gr":"prote"},"pan":{"nombre":"Pan integral","kcal":247,"p":13.0,"c":41.0,"g":3.4,"gr":"carbo"},"arepa":{"nombre":"Arepa de maíz","kcal":195,"p":4.0,"c":40.0,"g":2.0,"gr":"carbo"},"aceite":{"nombre":"Aceite de oliva","kcal":884,"p":0.0,"c":0.0,"g":100.0,"gr":"grasa"},"leche":{"nombre":"Leche descremada","kcal":35,"p":3.4,"c":5.0,"g":0.2,"gr":"prote"},"salmon":{"nombre":"Salmón","kcal":208,"p":22.0,"c":0.0,"g":12.0,"gr":"prote"},"camaron":{"nombre":"Camarones","kcal":99,"p":24.0,"c":0.0,"g":0.3,"gr":"prote"},"molida":{"nombre":"Carne molida magra","kcal":176,"p":26.0,"c":0.0,"g":8.0,"gr":"prote"},"jamonpavo":{"nombre":"Jamón de pavo","kcal":104,"p":17.0,"c":2.0,"g":3.0,"gr":"prote"},"sardina":{"nombre":"Sardinas en agua","kcal":165,"p":24.0,"c":0.0,"g":7.5,"gr":"prote"},"cottage":{"nombre":"Queso cottage","kcal":98,"p":11.0,"c":3.4,"g":4.3,"gr":"prote"},"quesocamp":{"nombre":"Queso campesino","kcal":190,"p":17.0,"c":3.0,"g":12.0,"gr":"prote"},"yuca":{"nombre":"Yuca cocida","kcal":112,"p":0.7,"c":27.0,"g":0.2,"gr":"carbo"},"platano":{"nombre":"Plátano cocido","kcal":122,"p":1.3,"c":32.0,"g":0.4,"gr":"carbo"},"pasta":{"nombre":"Pasta cocida","kcal":158,"p":5.8,"c":31.0,"g":0.9,"gr":"carbo"},"arrozint":{"nombre":"Arroz integral cocido","kcal":123,"p":2.7,"c":26.0,"g":1.0,"gr":"carbo"},"lentejas":{"nombre":"Lentejas cocidas","kcal":116,"p":9.0,"c":20.0,"g":0.4,"gr":"carbo"},"frijoles":{"nombre":"Fríjoles cocidos","kcal":127,"p":8.7,"c":22.8,"g":0.5,"gr":"carbo"},"garbanzos":{"nombre":"Garbanzos cocidos","kcal":164,"p":8.9,"c":27.0,"g":2.6,"gr":"carbo"},"mani":{"nombre":"Maní","kcal":567,"p":26.0,"c":16.0,"g":49.0,"gr":"grasa"},"manteqmani":{"nombre":"Mantequilla de maní","kcal":588,"p":25.0,"c":20.0,"g":50.0,"gr":"grasa"},"nueces":{"nombre":"Nueces","kcal":654,"p":15.0,"c":14.0,"g":65.0,"gr":"grasa"},"chia":{"nombre":"Semillas de chía","kcal":486,"p":17.0,"c":42.0,"g":31.0,"gr":"grasa"},"zanahoria":{"nombre":"Zanahoria","kcal":41,"p":0.9,"c":10.0,"g":0.2,"gr":"verdura"},"habichuela":{"nombre":"Habichuela","kcal":35,"p":1.8,"c":8.0,"g":0.1,"gr":"verdura"},"calabacin":{"nombre":"Calabacín","kcal":17,"p":1.2,"c":3.1,"g":0.3,"gr":"verdura"},"coliflor":{"nombre":"Coliflor","kcal":25,"p":1.9,"c":5.0,"g":0.3,"gr":"verdura"},"tomate":{"nombre":"Tomate","kcal":18,"p":0.9,"c":3.9,"g":0.2,"gr":"verdura"},"pepino":{"nombre":"Pepino","kcal":15,"p":0.7,"c":3.6,"g":0.1,"gr":"verdura"},"papaya":{"nombre":"Papaya","kcal":43,"p":0.5,"c":11.0,"g":0.3,"gr":"fruta"},"pina":{"nombre":"Piña","kcal":50,"p":0.5,"c":13.0,"g":0.1,"gr":"fruta"},"mango":{"nombre":"Mango","kcal":60,"p":0.8,"c":15.0,"g":0.4,"gr":"fruta"},"fresa":{"nombre":"Fresas","kcal":32,"p":0.7,"c":7.7,"g":0.3,"gr":"fruta"},"mandarina":{"nombre":"Mandarina","kcal":53,"p":0.8,"c":13.0,"g":0.3,"gr":"fruta"},"uvas":{"nombre":"Uvas","kcal":69,"p":0.7,"c":18.0,"g":0.2,"gr":"fruta"},"pera":{"nombre":"Pera","kcal":57,"p":0.4,"c":15.0,"g":0.1,"gr":"fruta"}},"menu":{"Lunes":[{"tipo":"Desayuno","nombre":"Huevos + avena","items":[{"id":"huevo","nombre":"Huevo entero","g":150},{"id":"clara","nombre":"Clara de huevo","g":66},{"id":"avena","nombre":"Avena en hojuelas","g":70},{"id":"banano","nombre":"Banano","g":100}],"kcal":610,"p":39,"c":71,"g":20},{"tipo":"Almuerzo","nombre":"Pollo + papa","items":[{"id":"pollo","nombre":"Pechuga de pollo","g":170},{"id":"papa","nombre":"Papa blanca cocida","g":410},{"id":"ensalada","nombre":"Ensalada mixta","g":120},{"id":"aceite","nombre":"Aceite de oliva","g":8},{"id":"aguacate","nombre":"Aguacate","g":40}],"kcal":794,"p":63,"c":90,"g":21},{"tipo":"Snack","nombre":"Yogur griego","items":[{"id":"yogur","nombre":"Yogur griego natural","g":200},{"id":"almendras","nombre":"Almendras","g":20}],"kcal":234,"p":24,"c":12,"g":11},{"tipo":"Cena","nombre":"Carne + verduras","items":[{"id":"carne","nombre":"Carne magra de res","g":150},{"id":"brocoli","nombre":"Brócoli cocido","g":200},{"id":"papa","nombre":"Papa blanca cocida","g":200},{"id":"aceite","nombre":"Aceite de oliva","g":5}],"kcal":569,"p":54,"c":54,"g":16}],"Martes":[{"tipo":"Desayuno","nombre":"Yogur + fruta","items":[{"id":"yogur","nombre":"Yogur griego natural","g":250},{"id":"avena","nombre":"Avena en hojuelas","g":50},{"id":"banano","nombre":"Banano","g":100},{"id":"almendras","nombre":"Almendras","g":25}],"kcal":576,"p":40,"c":71,"g":17},{"tipo":"Almuerzo","nombre":"Carne + arroz","items":[{"id":"carne","nombre":"Carne magra de res","g":165},{"id":"arroz","nombre":"Arroz blanco cocido","g":220},{"id":"ensalada","nombre":"Ensalada mixta","g":120},{"id":"aceite","nombre":"Aceite de oliva","g":12},{"id":"aguacate","nombre":"Aguacate","g":60}],"kcal":818,"p":58,"c":71,"g":33},{"tipo":"Snack","nombre":"Batido de proteína","items":[{"id":"whey","nombre":"Proteína whey","g":25},{"id":"manzana","nombre":"Manzana","g":180}],"kcal":189,"p":20,"c":27,"g":1},{"tipo":"Cena","nombre":"Pescado + papa","items":[{"id":"pescado","nombre":"Pescado blanco","g":200},{"id":"papa","nombre":"Papa blanca cocida","g":300},{"id":"brocoli","nombre":"Brócoli cocido","g":150},{"id":"aceite","nombre":"Aceite de oliva","g":6}],"kcal":623,"p":62,"c":70,"g":12}],"Miércoles":[{"tipo":"Desayuno","nombre":"Pollo + papa","items":[{"id":"pollo","nombre":"Pechuga de pollo","g":130},{"id":"papa","nombre":"Papa blanca cocida","g":300},{"id":"huevo","nombre":"Huevo entero","g":100},{"id":"aceite","nombre":"Aceite de oliva","g":5}],"kcal":663,"p":59,"c":61,"g":19},{"tipo":"Almuerzo","nombre":"Pavo + arroz","items":[{"id":"pavo","nombre":"Pechuga de pavo","g":160},{"id":"arroz","nombre":"Arroz blanco cocido","g":250},{"id":"ensalada","nombre":"Ensalada mixta","g":120},{"id":"aguacate","nombre":"Aguacate","g":70}],"kcal":675,"p":56,"c":80,"g":14},{"tipo":"Snack","nombre":"Fruta + almendras","items":[{"id":"naranja","nombre":"Naranja","g":200},{"id":"almendras","nombre":"Almendras","g":25}],"kcal":239,"p":7,"c":30,"g":13},{"tipo":"Cena","nombre":"Pollo + ensalada","items":[{"id":"pollo","nombre":"Pechuga de pollo","g":160},{"id":"ensalada","nombre":"Ensalada mixta","g":150},{"id":"criolla","nombre":"Papa criolla cocida","g":280},{"id":"aceite","nombre":"Aceite de oliva","g":12}],"kcal":663,"p":57,"c":64,"g":19}],"Jueves":[{"tipo":"Desayuno","nombre":"Huevos + pan","items":[{"id":"huevo","nombre":"Huevo entero","g":150},{"id":"clara","nombre":"Clara de huevo","g":66},{"id":"pan","nombre":"Pan integral","g":100},{"id":"aguacate","nombre":"Aguacate","g":60}],"kcal":592,"p":40,"c":48,"g":27},{"tipo":"Almuerzo","nombre":"Cerdo + papa","items":[{"id":"cerdo","nombre":"Lomo de cerdo","g":155},{"id":"papa","nombre":"Papa blanca cocida","g":400},{"id":"ensalada","nombre":"Ensalada mixta","g":120},{"id":"aceite","nombre":"Aceite de oliva","g":6}],"kcal":691,"p":56,"c":84,"g":14},{"tipo":"Snack","nombre":"Yogur + fruta","items":[{"id":"yogur","nombre":"Yogur griego natural","g":200},{"id":"banano","nombre":"Banano","g":100},{"id":"almendras","nombre":"Almendras","g":20}],"kcal":323,"p":25,"c":35,"g":11},{"tipo":"Cena","nombre":"Atún + papa","items":[{"id":"atun","nombre":"Atún en agua","g":180},{"id":"papa","nombre":"Papa blanca cocida","g":300},{"id":"espinaca","nombre":"Espinaca","g":150},{"id":"aceite","nombre":"Aceite de oliva","g":10},{"id":"naranja","nombre":"Naranja","g":100}],"kcal":640,"p":58,"c":77,"g":12}],"Viernes":[{"tipo":"Desayuno","nombre":"Avena + huevos","items":[{"id":"avena","nombre":"Avena en hojuelas","g":70},{"id":"huevo","nombre":"Huevo entero","g":150},{"id":"clara","nombre":"Clara de huevo","g":66},{"id":"leche","nombre":"Leche descremada","g":200}],"kcal":591,"p":45,"c":58,"g":20},{"tipo":"Almuerzo","nombre":"Pollo + arroz","items":[{"id":"pollo","nombre":"Pechuga de pollo","g":180},{"id":"arroz","nombre":"Arroz blanco cocido","g":250},{"id":"ensalada","nombre":"Ensalada mixta","g":120},{"id":"aceite","nombre":"Aceite de oliva","g":8},{"id":"aguacate","nombre":"Aguacate","g":50}],"kcal":794,"p":65,"c":79,"g":23},{"tipo":"Snack","nombre":"Manzana + almendras","items":[{"id":"manzana","nombre":"Manzana","g":180},{"id":"almendras","nombre":"Almendras","g":25}],"kcal":238,"p":6,"c":31,"g":13},{"tipo":"Cena","nombre":"Pescado + verduras","items":[{"id":"pescado","nombre":"Pescado blanco","g":200},{"id":"brocoli","nombre":"Brócoli cocido","g":200},{"id":"papa","nombre":"Papa blanca cocida","g":270},{"id":"aceite","nombre":"Aceite de oliva","g":6}],"kcal":614,"p":62,"c":68,"g":12}],"Sábado":[{"tipo":"Desayuno","nombre":"Yogur + avena","items":[{"id":"yogur","nombre":"Yogur griego natural","g":250},{"id":"avena","nombre":"Avena en hojuelas","g":70},{"id":"banano","nombre":"Banano","g":100}],"kcal":509,"p":38,"c":78,"g":6},{"tipo":"Almuerzo","nombre":"Carne + papa","items":[{"id":"carne","nombre":"Carne magra de res","g":180},{"id":"papa","nombre":"Papa blanca cocida","g":350},{"id":"ensalada","nombre":"Ensalada mixta","g":120},{"id":"aceite","nombre":"Aceite de oliva","g":8},{"id":"aguacate","nombre":"Aguacate","g":50}],"kcal":813,"p":63,"c":79,"g":29},{"tipo":"Snack","nombre":"Almendras + manzana","items":[{"id":"almendras","nombre":"Almendras","g":30},{"id":"manzana","nombre":"Manzana","g":180}],"kcal":267,"p":7,"c":32,"g":15},{"tipo":"Cena","nombre":"Pollo + ensalada","items":[{"id":"pollo","nombre":"Pechuga de pollo","g":200},{"id":"ensalada","nombre":"Ensalada mixta","g":150},{"id":"arroz","nombre":"Arroz blanco cocido","g":160},{"id":"aceite","nombre":"Aceite de oliva","g":8}],"kcal":636,"p":68,"c":50,"g":16}],"Domingo":[{"tipo":"Desayuno","nombre":"Huevos + arepa","items":[{"id":"huevo","nombre":"Huevo entero","g":150},{"id":"clara","nombre":"Clara de huevo","g":66},{"id":"arepa","nombre":"Arepa de maíz","g":120},{"id":"aguacate","nombre":"Aguacate","g":70}],"kcal":595,"p":32,"c":56,"g":27},{"tipo":"Almuerzo","nombre":"Pescado + arroz","items":[{"id":"pescado","nombre":"Pescado blanco","g":210},{"id":"arroz","nombre":"Arroz blanco cocido","g":250},{"id":"ensalada","nombre":"Ensalada mixta","g":120},{"id":"aceite","nombre":"Aceite de oliva","g":10}],"kcal":704,"p":63,"c":74,"g":17},{"tipo":"Snack","nombre":"Batido de proteína","items":[{"id":"whey","nombre":"Proteína whey","g":30},{"id":"banano","nombre":"Banano","g":100},{"id":"almendras","nombre":"Almendras","g":15}],"kcal":290,"p":28,"c":29,"g":9},{"tipo":"Cena","nombre":"Carne + verduras","items":[{"id":"carne","nombre":"Carne magra de res","g":155},{"id":"brocoli","nombre":"Brócoli cocido","g":200},{"id":"papa","nombre":"Papa blanca cocida","g":290},{"id":"aceite","nombre":"Aceite de oliva","g":3}],"kcal":639,"p":57,"c":72,"g":15}]}};
 const DIAS=["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
 const ORD=["Desayuno","Almuerzo","Snack","Cena"];
-const META={kmin:2200,kmax:2400,p:170,c:220,g:65};
+let META={obj:2300,kmin:2200,kmax:2400,p:180,c:220,g:65};
 const K="duvan-def-v1";
 let ST=JSON.parse(localStorage.getItem(K)||'{"dias":{},"ia":{}}');
 let FECHA=hoy(), stream=null, imgB64=null, ultimo=null;
 
 function hoy(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
-function save(){localStorage.setItem(K,JSON.stringify(ST))}
+function save(){try{localStorage.setItem(K,JSON.stringify(ST))}
+ catch(e){alert("El navegador se quedó sin espacio. Borra algunas fotos de progreso para poder seguir guardando.")}}
 function dia(f){if(!ST.dias[f])ST.dias[f]={check:{},extra:[]};return ST.dias[f]}
 function nomDia(f){const[a,m,d]=f.split("-").map(Number);return DIAS[new Date(a,m-1,d).getDay()]}
 function r(n){return Math.round(n)}
@@ -268,7 +329,13 @@ function shiftDay(n){const[a,m,d]=FECHA.split("-").map(Number);const dt=new Date
  setDate(dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0")+"-"+String(dt.getDate()).padStart(2,"0"))}
 
 function comidasDe(f){
-  const base=(DATA.menu[nomDia(f)]||[]).map((m,i)=>({...m,id:"m"+i,plan:true}));
+  const sw=swaps(f);
+  const base=(DATA.menu[nomDia(f)]||[]).map((m,i)=>{
+    const its=m.items.map((it,j)=>{const s=sw["m"+i+":"+j];
+      return s&&DATA.foods[s.id]?{id:s.id,nombre:DATA.foods[s.id].nombre,g:s.g,orig:it}:it});
+    const mc=macrosDe(its);
+    return {...m,id:"m"+i,plan:true,items:its,kcal:mc.kcal,p:mc.p,c:mc.c,g:mc.g};
+  });
   const ex=dia(f).extra.map((e,i)=>({...e,id:"x"+i,plan:false}));
   return base.concat(ex);
 }
@@ -279,6 +346,8 @@ function totales(f){
 }
 
 function render(){
+  recalcMeta();
+  document.getElementById('pobj').textContent="/ "+META.kmin+"–"+META.kmax+" kcal";
   const ck=dia(FECHA).check, t=totales(FECHA);
   document.getElementById('pk').textContent=r(t.k);
   const pct=Math.min(t.k/META.kmax*100,100);
@@ -295,7 +364,10 @@ function render(){
     el.parentElement.querySelector('.bar i').style.width=Math.min(v/m*100,100)+"%";
   });
 
-  let h="<div style='font-size:12px;color:var(--tx2);margin-top:14px'>"+nomDia(FECHA)+" · "+comidasDe(FECHA).filter(m=>ck[m.id]).length+" de "+comidasDe(FECHA).length+" comidas marcadas</div>";
+  const nsw=Object.keys(swaps(FECHA)).length;
+  let h="<div style='font-size:12px;color:var(--tx2);margin-top:14px;display:flex;align-items:center;gap:8px'><span>"
+   +nomDia(FECHA)+" · "+comidasDe(FECHA).filter(m=>ck[m.id]).length+" de "+comidasDe(FECHA).length+" comidas marcadas</span>"
+   +(nsw?"<button class='sw' style='width:auto;padding:0 9px;color:var(--acc)' onclick='resetSwaps()'>↺ "+nsw+" reemplazo"+(nsw>1?"s":"")+"</button>":"")+"</div>";
   ORD.forEach(tipo=>{
     const ms=comidasDe(FECHA).filter(m=>m.tipo===tipo);
     if(!ms.length)return;
@@ -309,15 +381,19 @@ function render(){
        +"<div class='cbody'><div class='ctitle'>"+m.nombre
        + (m.origen==='ia'?"<span class='tag ia'>IA</span>":m.plan?"":"<span class='tag'>manual</span>")+"</div>"
        +"<div class='cmeta'><span><b>"+r(m.kcal)+"</b> kcal</span><span style='color:var(--p)'>P "+r(m.p)+"g</span><span style='color:var(--c)'>C "+r(m.c)+"g</span><span style='color:var(--g)'>G "+r(m.g)+"g</span></div>"
-       + (m.items&&m.items.length?"<button class='tgl' onclick=\"this.nextElementSibling.classList.toggle('show')\">Ver porciones</button><ul class='ing'>"
-            +m.items.map(i=>"<li><b>"+i.nombre+"</b><span>"+i.g+" g</span></li>").join("")+"</ul>":"")
+       + (m.items&&m.items.length?"<button class='tgl' onclick=\"this.nextElementSibling.classList.toggle('show')\">Ver porciones y reemplazos</button><ul class='ing"+(m.items.some(i=>i.orig)?" show":"")+"'>"
+            +m.items.map((i,j)=>"<li><b>"+i.nombre+"</b>"
+              +(i.orig?"<em>↺ en vez de "+i.orig.nombre.toLowerCase()+"</em>":"")
+              +"<span class='gq'>"+i.g+" g</span>"
+              +(m.plan?"<button class='sw' title='Reemplazar' onclick=\"openSwap('"+m.id+"',"+j+")\">⇄</button>":"")
+              +"</li>").join("")+"</ul>":"")
        +"</div>"
        + (m.plan?"":"<button class='del' onclick=\"borrar('"+m.id+"')\">×</button>")
        +"</div></div>";
     });
   });
   document.getElementById('hoyBox').innerHTML=h;
-  renderSem();
+  renderSem(); renderProg();
 }
 
 function toggle(id){const c=dia(FECHA).check;c[id]=!c[id];if(!c[id])delete c[id];save();render()}
@@ -339,8 +415,15 @@ function renderSem(){
 }
 
 function renderAli(){
-  document.getElementById('tbAli').innerHTML=Object.keys(DATA.foods).map(k=>{const f=DATA.foods[k];
-    return "<tr onclick=\"preAdd('"+k+"')\"><td>"+f.nombre+"</td><td>"+f.kcal+"</td><td>"+f.p+"</td><td>"+f.c+"</td><td>"+f.g+"</td></tr>"}).join("");
+  let h="";
+  Object.keys(GRP).forEach(g=>{
+    const ks=Object.keys(DATA.foods).filter(k=>DATA.foods[k].gr===g)
+      .sort((a,b)=>DATA.foods[b][GRP[g].a==="kcal"?"kcal":GRP[g].a]-DATA.foods[a][GRP[g].a==="kcal"?"kcal":GRP[g].a]);
+    h+="<tr style='cursor:default'><td colspan='5' class='grphd'>"+GRP[g].ico+" "+GRP[g].n+" · se reemplazan entre sí</td></tr>";
+    h+=ks.map(k=>{const f=DATA.foods[k];
+      return "<tr onclick=\"preAdd('"+k+"')\"><td>"+f.nombre+"</td><td>"+f.kcal+"</td><td>"+f.p+"</td><td>"+f.c+"</td><td>"+f.g+"</td></tr>"}).join("");
+  });
+  document.getElementById('tbAli').innerHTML=h;
 }
 function preAdd(k){const f=DATA.foods[k];const gr=prompt("¿Cuántos gramos de "+f.nombre+"?","100");
   if(!gr)return;const q=parseFloat(gr)/100;if(isNaN(q))return;
@@ -457,6 +540,291 @@ function guardarIA(){
   ultimo=null;
 }
 
+
+/* ================= PROGRESO ================= */
+const ACT=[[1.2,"Sedentario · sin entreno"],[1.375,"Ligero · 3 días/semana"],[1.55,"Moderado · 5 días/semana"],[1.725,"Alto · 6–7 días"],[1.9,"Muy alto · doble sesión"]];
+const DEF=[[300,"Suave · ~0.3 kg/semana"],[500,"Estándar · ~0.5 kg/semana"],[700,"Agresivo · ~0.7 kg/semana"]];
+
+function P(){if(!ST.perfil)ST.perfil={sexo:"h",edad:23,altura:176,act:1.55,def:500,pesoIni:82,meta:75};return ST.perfil}
+function pesos(){if(!ST.pesos)ST.pesos=[];return ST.pesos.slice().sort((a,b)=>a.f<b.f?-1:1)}
+function pesoAct(){const p=pesos();return p.length?p[p.length-1].kg:P().pesoIni}
+function ultReg(){const p=pesos();return p.length?p[p.length-1]:null}
+function tmb(kg){const c=P();return c.sexo==="h"?10*kg+6.25*c.altura-5*c.edad+5:10*kg+6.25*c.altura-5*c.edad-161}
+function tdee(kg){return tmb(kg)*P().act}
+function recalcMeta(){
+  const c=P(),kg=pesoAct(),obj=Math.round(tdee(kg)-c.def);
+  const pr=Math.round(Math.min(2.2*kg,195)),gr=Math.round(0.8*kg);
+  META={obj:obj,kmin:obj-100,kmax:obj+100,p:pr,c:Math.max(Math.round((obj-pr*4-gr*9)/4),60),g:gr};
+}
+function imc(kg){const m=P().altura/100;return kg/(m*m)}
+function imcCat(v){return v<18.5?["Bajo peso","var(--c)"]:v<25?["Normal","var(--acc)"]:v<30?["Sobrepeso","var(--c)"]:["Obesidad","var(--warn)"]}
+function navy(rg){
+  if(!rg)return null;const c=P(),h=c.altura;
+  if(!rg.cintura||!rg.cuello)return null;
+  if(c.sexo==="h"){const d=rg.cintura-rg.cuello;if(d<=0)return null;
+    return 495/(1.0324-0.19077*Math.log10(d)+0.15456*Math.log10(h))-450}
+  if(!rg.cadera)return null;const d=rg.cintura+rg.cadera-rg.cuello;if(d<=0)return null;
+  return 495/(1.29579-0.35004*Math.log10(d)+0.22100*Math.log10(h))-450;
+}
+function ultMed(){const p=pesos();for(let i=p.length-1;i>=0;i--)if(p[i].cintura&&p[i].cuello)return p[i];return null}
+function lunes(f){const[a,m,d]=f.split("-").map(Number),dt=new Date(a,m-1,d);
+  dt.setDate(dt.getDate()-((dt.getDay()+6)%7));
+  return dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0")+"-"+String(dt.getDate()).padStart(2,"0")}
+function semanas(){const g={};pesos().forEach(p=>{const k=lunes(p.f);(g[k]=g[k]||[]).push(p.kg)});
+  return Object.keys(g).sort().map(k=>({sem:k,avg:g[k].reduce((a,b)=>a+b,0)/g[k].length,n:g[k].length}))}
+function dLarga(f){const[a,m,d]=f.split("-").map(Number);
+  return d+" "+["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"][m-1]}
+function diasDesde(f){const[a,m,d]=f.split("-").map(Number);
+  return Math.round((new Date(hoy().split("-")[0],+hoy().split("-")[1]-1,+hoy().split("-")[2])-new Date(a,m-1,d))/864e5)}
+function f1(n){return (n>0?"+":"")+n.toFixed(1)}
+
+function chartPeso(){
+  const p=pesos();if(p.length<2)return "<div class='empty'>Registra al menos 2 pesajes para ver la gráfica</div>";
+  const W=320,H=132,PL=30,PR=6,PT=10,PB=18;
+  const ks=p.map(x=>x.kg);let mn=Math.min(...ks),mx=Math.max(...ks);
+  const pd=Math.max((mx-mn)*.25,.6);mn-=pd;mx+=pd;
+  const tt=f=>{const[a,m,d]=f.split("-").map(Number);return new Date(a,m-1,d).getTime()};
+  const t0=tt(p[0].f),t1=tt(p[p.length-1].f);
+  const X=f=>PL+(t1===t0?(W-PL-PR)/2:(tt(f)-t0)/(t1-t0)*(W-PL-PR));
+  const Y=k=>PT+(1-(k-mn)/(mx-mn))*(H-PT-PB);
+  const pts=p.map(x=>X(x.f).toFixed(1)+","+Y(x.kg).toFixed(1));
+  let s="<svg class='ch' viewBox='0 0 "+W+" "+H+"'>";
+  [0,.5,1].forEach(q=>{const v=mn+(mx-mn)*q,y=Y(v);
+    s+="<line x1='"+PL+"' y1='"+y+"' x2='"+(W-PR)+"' y2='"+y+"' stroke='#2a323d' stroke-width='.7'/>"
+     +"<text x='"+(PL-5)+"' y='"+(y+3.2)+"' fill='#8b98a8' font-size='8' text-anchor='end'>"+v.toFixed(1)+"</text>"});
+  const yi=Y(P().pesoIni);
+  if(yi>PT&&yi<H-PB)s+="<line x1='"+PL+"' y1='"+yi+"' x2='"+(W-PR)+"' y2='"+yi+"' stroke='#8b98a8' stroke-width='.8' stroke-dasharray='3 3'/>";
+  s+="<polygon points='"+PL+","+(H-PB)+" "+pts.join(" ")+" "+(W-PR)+","+(H-PB)+"' fill='rgba(63,185,80,.13)'/>";
+  s+="<polyline points='"+pts.join(" ")+"' fill='none' stroke='#3fb950' stroke-width='2' stroke-linejoin='round' stroke-linecap='round'/>";
+  p.forEach(x=>s+="<circle cx='"+X(x.f).toFixed(1)+"' cy='"+Y(x.kg).toFixed(1)+"' r='2.6' fill='#0e1116' stroke='#3fb950' stroke-width='1.8'/>");
+  s+="<text x='"+PL+"' y='"+(H-4)+"' fill='#8b98a8' font-size='8'>"+dLarga(p[0].f)+"</text>";
+  s+="<text x='"+(W-PR)+"' y='"+(H-4)+"' fill='#8b98a8' font-size='8' text-anchor='end'>"+dLarga(p[p.length-1].f)+"</text>";
+  return s+"</svg>";
+}
+
+function renderProg(){
+  const c=P(),ps=pesos(),kg=pesoAct(),ini=c.pesoIni,dif=kg-ini;
+  const iv=imc(kg),[icat,icol]=imcCat(iv),sm=semanas();
+  const ur=ultReg(),um=ultMed(),gr=navy(um);
+  let h="";
+
+  /* alertas */
+  if(sm.length>=3){
+    const d=sm[sm.length-1].avg-sm[sm.length-3].avg;
+    if(d>-0.2)h+="<div class='alert'><b>Peso estancado.</b> En las últimas 2 semanas tu promedio cambió "
+      +f1(d)+" kg. Según tu manual: reduce 100–150 kcal al día (quedarías en ~"+(META.obj-125)
+      +" kcal) o suma 15–20 minutos de caminata diaria.</div>";
+    else h+="<div class='alert ok'><b>Vas bien.</b> Bajaste "+Math.abs(d).toFixed(1)+" kg de promedio en las últimas 2 semanas.</div>";
+  }
+  if(ur&&diasDesde(ur.f)>=7)h+="<div class='alert'><b>Llevas "+diasDesde(ur.f)+" días sin pesarte.</b> El manual pide 3 pesajes por semana en ayunas.</div>";
+  const uf=(ST.fotos||[]).slice(-1)[0];
+  if(ps.length&&(!uf||diasDesde(uf.f)>=15))h+="<div class='alert'><b>Toca foto de progreso.</b> "
+    +(uf?"Han pasado "+diasDesde(uf.f)+" días desde la última.":"Aún no tienes fotos.")+" El manual pide una cada 15 días, misma luz y postura.</div>";
+
+  /* tarjetas */
+  h+="<div class='pcards'>"
+   +"<div class='pc'><div class='lb'>Peso inicial</div><div class='vl'>"+ini.toFixed(1)+"<small> kg</small></div><div class='sm'>punto de partida</div></div>"
+   +"<div class='pc'><div class='lb'>Peso actual</div><div class='vl'>"+kg.toFixed(1)+"<small> kg</small></div><div class='sm'>"+(ur?dLarga(ur.f):"sin registros")+"</div></div>"
+   +"<div class='pc'><div class='lb'>Cambio</div><div class='vl "+(dif<0?"down":dif>0?"up":"")+"'>"+f1(dif)+"<small> kg</small></div><div class='sm'>"
+     +(ini?Math.abs(dif/ini*100).toFixed(1)+"% del inicial":"")+"</div></div>"
+   +"<div class='pc'><div class='lb'>IMC</div><div class='vl' style='color:"+icol+"'>"+iv.toFixed(1)+"</div><div class='sm'>"+icat+"</div></div>"
+   +"</div>"
+   +"<p style='font-size:11.5px;color:var(--tx2);margin:-4px 0 14px'>Ojo con el IMC: solo cruza peso y altura, no distingue músculo de grasa. "
+   +"Entrenando fuerza 5 días por semana es normal que te marque alto aunque estés bien. Fíate más del % de grasa y de las fotos.</p>";
+
+  /* meta de peso */
+  if(c.meta&&ini!==c.meta){
+    const av=Math.min(Math.max((ini-kg)/(ini-c.meta)*100,0),100);
+    h+="<div class='box'><h3>Camino a "+c.meta+" kg</h3>"
+     +"<div class='kcal'><b style='font-size:24px'>"+av.toFixed(0)+"%</b><span class='of'>completado</span>"
+     +"<span class='rest'>faltan "+Math.max(kg-c.meta,0).toFixed(1)+" kg</span></div>"
+     +"<div class='bar'><i style='width:"+av+"%'></i></div></div>";
+  }
+
+  h+="<div class='box'><h3>Evolución del peso</h3>"+chartPeso()+"</div>";
+
+  /* registrar */
+  h+="<div class='box'><h3>Registrar pesaje</h3>"
+   +"<div class='grid2'><div><label>Fecha</label><input type='date' id='wF' value='"+hoy()+"'></div>"
+   +"<div><label>Peso (kg)</label><input type='number' step='0.1' id='wK' placeholder='"+kg.toFixed(1)+"'></div></div>"
+   +"<label>Medidas opcionales — en cm, con cinta métrica</label><div class='grid2' style='grid-template-columns:1fr 1fr 1fr'>"
+   +"<input type='number' step='0.5' id='wCi' placeholder='Cintura'>"
+   +"<input type='number' step='0.5' id='wCu' placeholder='Cuello'>"
+   +"<input type='number' step='0.5' id='wCa' placeholder='Cadera'></div>"
+   +"<div class='camctl'><button class='btn pri' onclick='addPeso()' style='flex:1'>Guardar pesaje</button></div>"
+   +"<p style='font-size:11.5px;color:var(--tx2);margin:9px 0 0'>Pésate en ayunas, después de ir al baño y sin ropa. "
+   +"Cintura a la altura del ombligo, cuello justo debajo de la nuez.</p></div>";
+
+  /* composición */
+  if(gr!==null){
+    const mg=kg*gr/100, ml=kg-mg;
+    const cat=gr<6?"Esencial":gr<14?"Atlético":gr<18?"Fitness":gr<25?"Aceptable":"Alto";
+    h+="<div class='box'><h3>Composición corporal</h3><div class='pcards' style='margin:0'>"
+     +"<div class='pc'><div class='lb'>Grasa corporal</div><div class='vl'>"+gr.toFixed(1)+"<small> %</small></div><div class='sm'>"+cat+"</div></div>"
+     +"<div class='pc'><div class='lb'>Masa grasa</div><div class='vl'>"+mg.toFixed(1)+"<small> kg</small></div></div>"
+     +"<div class='pc'><div class='lb'>Masa magra</div><div class='vl'>"+ml.toFixed(1)+"<small> kg</small></div><div class='sm'>lo que quieres conservar</div></div>"
+     +"</div><div class='gauge'><i style='width:"+Math.min(gr,100)+"%;background:var(--c)'></i><i style='flex:1;background:var(--p)'></i></div>"
+     +"<p style='font-size:11.5px;color:var(--tx2);margin:9px 0 0'>Método Navy con tus medidas del "+dLarga(um.f)
+     +" (cintura "+um.cintura+" cm, cuello "+um.cuello+" cm). Es una estimación: lo útil es la tendencia, no el número exacto.</p></div>";
+  }
+
+  /* semanas */
+  if(sm.length){
+    h+="<div class='box'><h3>Promedio semanal</h3><table><thead><tr><th>Semana del</th><th>Pesajes</th><th>Promedio</th><th>Cambio</th></tr></thead><tbody>";
+    sm.slice().reverse().forEach((w,i,ar)=>{
+      const pv=ar[i+1], d=pv?w.avg-pv.avg:null;
+      h+="<tr style='cursor:default'><td>"+dLarga(w.sem)+"</td><td>"+w.n+"</td><td>"+w.avg.toFixed(1)+" kg</td><td class='"
+        +(d===null?"":d<0?"down":d>0?"up":"")+"'>"+(d===null?"—":f1(d)+" kg")+"</td></tr>";
+    });
+    h+="</tbody></table><p style='font-size:11.5px;color:var(--tx2);margin:9px 0 0'>El promedio semanal es lo que vale: el peso diario sube y baja por agua, sal y digestión.</p></div>";
+  }
+
+  /* gasto calórico */
+  h+="<div class='box'><h3>Tu gasto calórico</h3><table><tbody>"
+   +"<tr style='cursor:default'><td>Metabolismo basal (TMB)</td><td><b>"+Math.round(tmb(kg))+" kcal</b></td></tr>"
+   +"<tr style='cursor:default'><td>Gasto total con entreno (TDEE)</td><td><b>"+Math.round(tdee(kg))+" kcal</b></td></tr>"
+   +"<tr style='cursor:default'><td>Déficit elegido</td><td><b>−"+c.def+" kcal</b></td></tr>"
+   +"<tr style='cursor:default'><td><b>Objetivo diario</b></td><td><b style='color:var(--acc)'>"+META.obj+" kcal</b></td></tr>"
+   +"<tr style='cursor:default'><td>Proteína · Carbos · Grasas</td><td><b>"+META.p+" · "+META.c+" · "+META.g+" g</b></td></tr>"
+   +"</tbody></table>"
+   +"<p style='font-size:11.5px;color:var(--tx2);margin:9px 0 0'>Fórmula Mifflin-St Jeor con tu peso actual. "
+   +"Se recalcula solo cada vez que registras un pesaje, y la barra de arriba usa este objetivo.</p></div>";
+
+  /* perfil */
+  h+="<details class='box'><summary>Editar mis datos</summary><div class='grid2'>"
+   +"<div><label>Sexo</label><select id='cSex'><option value='h'"+(c.sexo==="h"?" selected":"")+">Hombre</option><option value='m'"+(c.sexo==="m"?" selected":"")+">Mujer</option></select></div>"
+   +"<div><label>Edad</label><input type='number' id='cEd' value='"+c.edad+"'></div>"
+   +"<div><label>Altura (cm)</label><input type='number' id='cAl' value='"+c.altura+"'></div>"
+   +"<div><label>Peso inicial (kg)</label><input type='number' step='0.1' id='cIni' value='"+c.pesoIni+"'></div>"
+   +"<div><label>Peso meta (kg)</label><input type='number' step='0.1' id='cMeta' value='"+(c.meta||"")+"'></div>"
+   +"<div><label>Déficit</label><select id='cDef'>"+DEF.map(d=>"<option value='"+d[0]+"'"+(+c.def===d[0]?" selected":"")+">"+d[1]+"</option>").join("")+"</select></div>"
+   +"</div><label>Nivel de actividad</label><select id='cAct'>"
+   +ACT.map(a=>"<option value='"+a[0]+"'"+(+c.act===a[0]?" selected":"")+">"+a[1]+"</option>").join("")+"</select>"
+   +"<div class='camctl'><button class='btn pri' onclick='savePerfil()' style='flex:1'>Guardar datos</button></div></details>";
+
+  /* fotos */
+  h+="<div class='box'><h3>Fotos de progreso</h3>"
+   +(ST.fotos&&ST.fotos.length?"<div class='fotos'>"+ST.fotos.map((f,i)=>
+      "<div class='foto'><img src='"+f.img+"'><button onclick='delFoto("+i+")'>×</button><span>"+dLarga(f.f)+(f.kg?" · "+f.kg+" kg":"")+"</span></div>").join("")+"</div>"
+     :"<div class='empty'>Sin fotos todavía. Toma una cada 15 días con la misma luz y postura.</div>")
+   +"<input type='file' id='fFoto' accept='image/*' style='display:none' onchange='addFoto(event)'>"
+   +"<div class='camctl'><button class='btn pri' onclick=\"document.getElementById('fFoto').click()\" style='flex:1'>Añadir foto de hoy</button></div>"
+   +"<p style='font-size:11.5px;color:var(--tx2);margin:9px 0 0'>Se guardan solo en este navegador, nunca se suben a internet.</p></div>";
+
+  /* historial */
+  if(ps.length){
+    h+="<div class='box'><h3>Historial de pesajes</h3><ul class='hist'>";
+    ps.slice().reverse().forEach((x,i,ar)=>{
+      const pv=ar[i+1],d=pv?x.kg-pv.kg:null;
+      h+="<li><span class='f'>"+dLarga(x.f)+"</span><span class='k'>"+x.kg.toFixed(1)+" kg</span>"
+       +(x.cintura?"<span style='font-size:11px;color:var(--tx2)'>cint "+x.cintura+"</span>":"")
+       +"<span class='dd "+(d===null?"":d<0?"down":d>0?"up":"")+"'>"+(d===null?"":f1(d))+"</span>"
+       +"<button class='del' onclick='delPeso(\""+x.f+"\")'>×</button></li>";
+    });
+    h+="</ul></div>";
+  }
+  document.getElementById('progBox').innerHTML=h;
+}
+
+function addPeso(){
+  const f=document.getElementById('wF').value,k=parseFloat(document.getElementById('wK').value);
+  if(!f||!k||k<25||k>350){alert("Escribe un peso válido en kg");return}
+  const rg={f:f,kg:k};
+  const ci=parseFloat(document.getElementById('wCi').value),cu=parseFloat(document.getElementById('wCu').value),ca=parseFloat(document.getElementById('wCa').value);
+  if(ci)rg.cintura=ci; if(cu)rg.cuello=cu; if(ca)rg.cadera=ca;
+  if(!ST.pesos)ST.pesos=[];
+  const ix=ST.pesos.findIndex(x=>x.f===f);
+  if(ix>=0)ST.pesos[ix]=rg; else ST.pesos.push(rg);
+  if(ST.pesos.length===1&&!ST.perfil2){P().pesoIni=P().pesoIni||k;}
+  save();render();
+}
+function delPeso(f){if(!confirm("¿Borrar el pesaje del "+dLarga(f)+"?"))return;
+  ST.pesos=ST.pesos.filter(x=>x.f!==f);save();render()}
+function savePerfil(){
+  const c=P();
+  c.sexo=document.getElementById('cSex').value;
+  c.edad=+document.getElementById('cEd').value||23;
+  c.altura=+document.getElementById('cAl').value||176;
+  c.pesoIni=parseFloat(document.getElementById('cIni').value)||82;
+  c.meta=parseFloat(document.getElementById('cMeta').value)||0;
+  c.def=+document.getElementById('cDef').value;
+  c.act=+document.getElementById('cAct').value;
+  save();render();
+}
+function addFoto(e){
+  const fl=e.target.files[0];if(!fl)return;const rd=new FileReader();
+  rd.onload=ev=>{const im=new Image();im.onload=()=>{
+    const cv=document.createElement('canvas');const w=Math.min(im.width,520),hh=im.height*(w/im.width);
+    cv.width=w;cv.height=hh;cv.getContext('2d').drawImage(im,0,0,w,hh);
+    if(!ST.fotos)ST.fotos=[];
+    ST.fotos.push({f:hoy(),kg:pesoAct().toFixed(1),img:cv.toDataURL('image/jpeg',0.62)});
+    save();render()};im.src=ev.target.result};
+  rd.readAsDataURL(fl);e.target.value='';
+}
+function delFoto(i){if(!confirm("¿Borrar esta foto?"))return;ST.fotos.splice(i,1);save();render()}
+
+
+/* ================= REEMPLAZOS ================= */
+const GRP={prote:{n:"Proteínas",a:"p",u:"g de proteína",ico:"🥩"},
+ carbo:{n:"Carbohidratos",a:"c",u:"g de carbos",ico:"🥔"},
+ grasa:{n:"Grasas",a:"g",u:"g de grasa",ico:"🥑"},
+ fruta:{n:"Frutas",a:"kcal",u:"kcal",ico:"🍌"},
+ verdura:{n:"Verduras",a:"kcal",u:"kcal",ico:"🥦"}};
+let SWCTX=null;
+
+function swaps(f){const d=dia(f);if(!d.swap)d.swap={};return d.swap}
+function macrosDe(its){let k=0,p=0,c=0,g=0;its.forEach(i=>{const f=DATA.foods[i.id];if(!f)return;
+  const q=i.g/100;k+=f.kcal*q;p+=f.p*q;c+=f.c*q;g+=f.g*q});return{kcal:k,p:p,c:c,g:g}}
+
+function alternativas(id,g){
+  const f=DATA.foods[id],gr=GRP[f.gr];if(!gr)return[];
+  const base=gr.a==="kcal"?f.kcal:f[gr.a];if(!base)return[];
+  const kb=f.kcal*g/100,out=[];
+  Object.keys(DATA.foods).forEach(k=>{
+    if(k===id)return;const o=DATA.foods[k];if(o.gr!==f.gr)return;
+    const ov=gr.a==="kcal"?o.kcal:o[gr.a];if(!ov)return;
+    let ng=g*base/ov;if(ng<15||ng>700)return;
+    ng=ng>=100?Math.round(ng/5)*5:Math.round(ng);
+    const q=ng/100;
+    out.push({id:k,nombre:o.nombre,g:ng,kcal:o.kcal*q,p:o.p*q,c:o.c*q,gg:o.g*q,d:o.kcal*q-kb});
+  });
+  const pen=z=>Math.abs(z.d)+Math.max(0,z.g-300)*0.5;
+  out.sort((x,y)=>pen(x)-pen(y));
+  return out;
+}
+
+function openSwap(mid,j){
+  const m=comidasDe(FECHA).find(x=>x.id===mid);if(!m)return;
+  const cur=m.items[j],src=cur.orig||cur,f=DATA.foods[src.id],gr=GRP[f.gr];
+  SWCTX={mid:mid,j:j};
+  const alt=alternativas(src.id,src.g),kb=f.kcal*src.g/100;
+  let h="<h3>¿No tienes "+f.nombre.toLowerCase()+"?</h3>"
+   +"<div class='orig'><b>"+src.g+" g de "+f.nombre+"</b>"
+   +"<div>"+r(kb)+" kcal · P "+r(f.p*src.g/100)+"g · C "+r(f.c*src.g/100)+"g · G "+r(f.g*src.g/100)+"g</div></div>"
+   +"<p style='font-size:12px;color:var(--tx2);margin:0 0 11px'>Cantidades ajustadas para darte los mismos "
+   +gr.u+". Toca la que tengas en la cocina:</p>";
+  if(cur.orig)h+="<div class='alt' onclick=\"undoSwap('"+mid+"',"+j+")\" style='border-color:var(--acc2)'>"
+    +"<div class='n'><b>↺ Volver a "+f.nombre+"</b><span>como está en el plan original</span></div>"
+    +"<div class='q'><b>"+src.g+" g</b><span>"+r(kb)+" kcal</span></div></div>";
+  h+=alt.map(a=>"<div class='alt' onclick=\"aplicarSwap('"+a.id+"',"+a.g+")\">"
+    +"<div class='n'><b>"+a.nombre+"</b><span>P "+r(a.p)+"g · C "+r(a.c)+"g · G "+r(a.gg)+"g</span></div>"
+    +"<div class='q'><b>"+a.g+" g</b><span style='color:"+(Math.abs(a.d)<25?"var(--tx2)":a.d>0?"var(--c)":"var(--acc)")+"'>"
+    +r(a.kcal)+" kcal "+(Math.abs(a.d)<5?"≈":(a.d>0?"+":"")+r(a.d))+"</span></div></div>").join("");
+  if(!alt.length)h+="<div class='empty'>No hay reemplazos equivalentes para este alimento.</div>";
+  h+="<div class='camctl' style='margin-top:14px'><button class='btn' onclick='closeSwap()' style='flex:1'>Cancelar</button></div>";
+  document.getElementById('swBody').innerHTML=h;
+  document.getElementById('mSwap').classList.add('on');
+}
+function aplicarSwap(id,g){
+  if(!SWCTX)return;
+  swaps(FECHA)[SWCTX.mid+":"+SWCTX.j]={id:id,g:g};
+  save();closeSwap();render();
+}
+function undoSwap(mid,j){delete swaps(FECHA)[mid+":"+j];save();closeSwap();render()}
+function closeSwap(){document.getElementById('mSwap').classList.remove('on');SWCTX=null}
+function resetSwaps(){if(!confirm("¿Volver al menú original de hoy?"))return;
+  ST.dias[FECHA].swap={};save();render()}
+
 /* ---------- Guía ---------- */
 document.getElementById('guiaBox').innerHTML=`
 <details open><summary>Reglas de oro</summary><ul>
@@ -470,11 +838,17 @@ document.getElementById('guiaBox').innerHTML=`
 <li>Calorías: 2200–2400 kcal</li><li>Proteína: 160–180 g</li>
 <li>Carbohidratos: 180–220 g</li><li>Grasas: 60–70 g</li>
 <li>Fuerza 5 días/semana</li></ul></details>
+<details><summary>Reemplazos de ingredientes</summary><p>Si no tienes algo en la cocina, en <b>Hoy</b> abre
+la comida, toca «Ver porciones y reemplazos» y luego el botón <b>⇄</b> del ingrediente. Te muestra por cuál cambiarlo
+y en qué cantidad exacta para mantener los mismos macros: las proteínas se ajustan por gramos de proteína,
+los carbohidratos por gramos de carbos, las grasas por gramos de grasa y frutas y verduras por calorías.
+El cambio aplica solo a ese día y puedes deshacerlo con ↺.</p></details>
 <details><summary>Equivalencias de carbohidratos</summary><ul>
 <li>250 g de papa blanca ≈ 150 g de arroz cocido</li>
 <li>250 g de papa blanca ≈ 150 g de pasta cocida</li>
 <li>200 g de papa criolla ≈ 230–250 g de papa blanca</li>
-</ul></details>
+</ul><p>Estas son las equivalencias redondeadas del manual. El botón ⇄ calcula la cifra exacta
+para la porción concreta que tengas ese día, así que si los números no coinciden al gramo, fíate del botón.</p></details>
 <details><summary>Lista de mercado</summary><ul>
 <li>3 kg pechuga de pollo</li><li>1 kg carne magra</li><li>1 kg pescado</li><li>30 huevos</li>
 <li>3 kg papa blanca</li><li>1 kg papa criolla</li><li>1 kg arroz</li><li>Avena</li><li>Yogur griego</li>
@@ -488,7 +862,8 @@ document.getElementById('guiaBox').innerHTML=`
 <details><summary>Ajustes</summary><p>Si durante dos semanas consecutivas tu peso no disminuye y estás cumpliendo el plan,
 reduce 100–150 kcal al día o aumenta 15–20 minutos de caminata diaria.</p></details>
 <details><summary>Seguimiento</summary><p>Pésate 3 veces por semana en ayunas y calcula el promedio.
-Toma fotos cada 15 días con la misma luz y postura.</p></details>
+Toma fotos cada 15 días con la misma luz y postura. Todo eso se registra en la pestaña <b>Progreso</b>,
+que calcula sola el promedio semanal y te avisa si el peso se estanca dos semanas seguidas.</p></details>
 <details><summary>Sobre tus datos</summary><p>Todo lo que marcas y tu API key se guardan solo en este navegador
 (localStorage). No hay servidor: si borras los datos del navegador, se pierde el historial.</p></details>`;
 
