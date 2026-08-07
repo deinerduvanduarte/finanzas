@@ -2294,9 +2294,33 @@ function resetDropi(){
 }
 
 // ─────────────────────────────────────────────
-// META ADS · DATOS AUTOMÁTICOS (meta_data.json + modo EN VIVO)
-// ─────────────────────────────────────────────
-let metaData = null;
+// ╔══════════════════════════════════════════════════════════════════╗
+// ║  ⚙️  CONFIGURACIÓN DE CUENTAS PUBLICITARIAS — EDITA SOLO AQUÍ     ║
+// ╠══════════════════════════════════════════════════════════════════╣
+// ║ Para AGREGAR una cuenta: copia una línea y cambia los datos.       ║
+// ║ Para QUITARLA: borra o comenta la línea con //                    ║
+// ║                                                                   ║
+// ║   id     → el act_XXXXX de la cuenta (obligatorio)                ║
+// ║   nombre → como quieres verlo en el dashboard                     ║
+// ║   bm     → nombre corto del Business Manager / portafolio         ║
+// ║                                                                   ║
+// ║ ⚠️  ADEMÁS de editar aquí, haz 2 cosas más:                       ║
+// ║   1) Asignar la cuenta al usuario del sistema "dashboard-sync"    ║
+// ║      con permiso "Ver rendimiento"                                ║
+// ║   2) Agregar el mismo act_XXXXX en scripts/meta_sync.js           ║
+// ╚══════════════════════════════════════════════════════════════════╝
+const META_CUENTAS = [
+  { id:'act_2235837880587647', nombre:'NEXORA 1', bm:'HT' },
+  { id:'act_763369709939342',  nombre:'NEXORA 2', bm:'HT' },
+  // { id:'act_XXXXXXXXXXXX',  nombre:'MI CUENTA 3', bm:'OTRO BM' },
+];
+// ── Fin de la configuración · no toques nada más abajo ──
+
+const META_ACCOUNTS   = META_CUENTAS.map(c=>c.id);
+const META_ACC_LABELS = Object.fromEntries(META_CUENTAS.map(c=>[c.id, c.nombre]));
+const META_ACC_BM     = Object.fromEntries(META_CUENTAS.map(c=>[c.id, c.bm||'']));
+const LMT = 'vd_meta_token';
+let metaData = null, metaBudgetsTs = 0, metaAccTs = 0;
 
 async function loadMetaData(showT){
   const urls = [
@@ -2309,8 +2333,7 @@ async function loadMetaData(showT){
       if(!r.ok) continue;
       const j = await r.json();
       if(j && Array.isArray(j.rows)){
-        metaData = j;
-        renderMeta();
+        metaData = j; renderMeta();
         if(curFrom === curTo) renderPauta();
         if(showT) toast('📡 Meta actualizado · ' + (j.updated_at_co||''));
         return true;
@@ -2318,8 +2341,8 @@ async function loadMetaData(showT){
     }catch(e){}
   }
   const el = document.getElementById('meta-body');
-  if(el && !metaData) el.innerHTML = '<div class="dropi-hist-empty">No se pudo cargar meta_data.json — verifica el workflow "Sync Meta Ads" en GitHub.</div>';
-  if(showT) toast('❌ No se pudo cargar datos de Meta');
+  if(el && !metaData) el.innerHTML = '<div class="dropi-hist-empty">No se pudo cargar meta_data.json — usa 🔑 Token para el modo en vivo.</div>';
+  if(showT) toast('❌ No se pudo cargar el JSON de Meta');
   return false;
 }
 
@@ -2336,64 +2359,21 @@ function metaProductFromCampaign(name){
   }
   return 'OTROS';
 }
-
 const fMeta = n => '$' + Math.round(n).toLocaleString('es-CO');
-
-// ── MODO EN VIVO ──
-const LMT = 'vd_meta_token';
-// ╔══════════════════════════════════════════════════════════════════╗
-// ║  ⚙️  CONFIGURACIÓN DE CUENTAS PUBLICITARIAS — EDITA SOLO AQUÍ     ║
-// ╠══════════════════════════════════════════════════════════════════╣
-// ║ Para AGREGAR una cuenta: copia una línea de abajo y cambia los    ║
-// ║ datos. Para QUITARLA: borra o comenta la línea con //             ║
-// ║                                                                   ║
-// ║   id     → el act_XXXXX de la cuenta                              ║
-// ║            (Business Settings → Cuentas publicitarias → ID)       ║
-// ║   nombre → como quieres verlo en el dashboard                     ║
-// ║   bm     → nombre corto del Business Manager / portafolio         ║
-// ║                                                                   ║
-// ║ ⚠️  ADEMÁS de editar aquí, debes hacer 2 cosas más:               ║
-// ║   1) Dar acceso a la cuenta al usuario del sistema                ║
-// ║      "dashboard-sync" con permiso "Ver rendimiento"               ║
-// ║      (business.facebook.com/settings/system-users)                ║
-// ║   2) Agregar el mismo act_XXXXX en scripts/meta_sync.js           ║
-// ║      (en la lista ACCOUNTS del repositorio de GitHub)             ║
-// ╚══════════════════════════════════════════════════════════════════╝
-const META_CUENTAS = [
-  { id:'act_2235837880587647', nombre:'NEXORA 1', bm:'HT' },
-  { id:'act_763369709939342',  nombre:'NEXORA 2', bm:'HT' },
-  // { id:'act_XXXXXXXXXXXX',  nombre:'MI CUENTA 3', bm:'OTRO BM' },
-];
-// ── Fin de la configuración · no hace falta tocar nada más abajo ──
-
-const META_ACCOUNTS   = META_CUENTAS.map(c=>c.id);
-const META_ACC_LABELS = Object.fromEntries(META_CUENTAS.map(c=>[c.id, c.nombre]));
-const META_ACC_BM     = Object.fromEntries(META_CUENTAS.map(c=>[c.id, c.bm||'']));
-let metaBudgetsTs = 0, metaAccTs = 0;
 
 function configMetaToken(){
   const cur = localStorage.getItem(LMT)||'';
   const t = prompt('🔑 Pega tu Meta Access Token para actualización EN VIVO cada minuto.\n\nSolo se guarda en ESTE navegador.\nDeja vacío y acepta para borrarlo.', cur);
   if(t === null) return;
-  if(t.trim()){
-    localStorage.setItem(LMT, t.trim());
-    toast('🔑 Token guardado — modo EN VIVO activado');
-    fetchMetaLive(true);
-  } else {
-    localStorage.removeItem(LMT);
-    toast('🔑 Token eliminado — se usará el sync de GitHub (15 min)');
-  }
+  if(t.trim()){ localStorage.setItem(LMT, t.trim()); toast('🔑 Token guardado — modo EN VIVO activado'); fetchMetaLive(true); }
+  else { localStorage.removeItem(LMT); toast('🔑 Token eliminado — se usará el sync de GitHub'); }
 }
 
 function metaLeadsFromActions(actions){
   if(!Array.isArray(actions)) return 0;
   const TY = ['onsite_conversion.messaging_conversation_started_7d','lead','onsite_conversion.lead_grouped'];
   let tot = 0; const seen = new Set();
-  actions.forEach(a=>{
-    if(TY.includes(a.action_type) && !seen.has(a.action_type)){
-      tot += parseInt(a.value,10)||0; seen.add(a.action_type);
-    }
-  });
+  actions.forEach(a=>{ if(TY.includes(a.action_type) && !seen.has(a.action_type)){ tot += parseInt(a.value,10)||0; seen.add(a.action_type); } });
   return tot;
 }
 
@@ -2407,43 +2387,40 @@ async function fetchMetaLive(showT){
     for(const acc of META_ACCOUNTS){
       const p = new URLSearchParams({
         fields:'campaign_id,campaign_name,spend,actions', level:'campaign',
-        time_range: JSON.stringify({since:today, until:today}),
-        limit:'500', access_token: tk
+        time_range: JSON.stringify({since:today, until:today}), limit:'500', access_token: tk
       });
-      const r = await fetch('https://graph.facebook.com/v21.0/'+acc+'/insights?'+p);
-      const j = await r.json();
+      const j = await (await fetch('https://graph.facebook.com/v21.0/'+acc+'/insights?'+p)).json();
       if(j.error) throw new Error(j.error.message);
-      (j.data||[]).forEach(x=>all.push({
-        d:today, a:acc, c:x.campaign_name||'', s:parseFloat(x.spend)||0, l:metaLeadsFromActions(x.actions)
-      }));
+      (j.data||[]).forEach(x=>all.push({d:today, a:acc, c:x.campaign_name||'',
+        s:parseFloat(x.spend)||0, l:metaLeadsFromActions(x.actions)}));
     }
 
-    // Presupuestos: campañas (CBO) + conjuntos (ABO) — cada 10 min para cuidar el límite de la API
+    // Presupuestos (CBO + ABO) — cada 10 min para cuidar el límite de la API
     let budgets = null;
     if(Date.now()-metaBudgetsTs > 600000 || !(metaData && Array.isArray(metaData.budgets))){
-    budgets = [];
-    for(const acc of META_ACCOUNTS){
-      try{
-        const pc = new URLSearchParams({fields:'name,effective_status,daily_budget',limit:'500',access_token:tk});
-        const jc = await (await fetch('https://graph.facebook.com/v21.0/'+acc+'/campaigns?'+pc)).json();
-        if(jc.error) continue;
-        const cmap = {};
-        (jc.data||[]).forEach(c=>{ cmap[c.id]={name:c.name, st:c.effective_status, b:parseFloat(c.daily_budget)||0, act:0, abA:0, abT:0}; });
-        const pa = new URLSearchParams({fields:'campaign_id,effective_status,daily_budget',limit:'500',access_token:tk});
-        const ja = await (await fetch('https://graph.facebook.com/v21.0/'+acc+'/adsets?'+pa)).json();
-        if(!ja.error)(ja.data||[]).forEach(s2=>{
-          const c = cmap[s2.campaign_id]; if(!c) return;
-          const b = parseFloat(s2.daily_budget)||0;
-          if(s2.effective_status==='ACTIVE'){ c.act++; c.abA+=b; }
-          c.abT += b;
-        });
-        Object.values(cmap).forEach(c=>{
-          const budget = c.b || (c.act>0 ? c.abA : c.abT);
-          if(budget>0 || c.act>0) budgets.push({c:c.name, b:budget, act:c.act, st:c.st});
-        });
-      }catch(e){}
-    }
-    metaBudgetsTs = Date.now();
+      budgets = [];
+      for(const acc of META_ACCOUNTS){
+        try{
+          const pc = new URLSearchParams({fields:'name,effective_status,daily_budget',limit:'500',access_token:tk});
+          const jc = await (await fetch('https://graph.facebook.com/v21.0/'+acc+'/campaigns?'+pc)).json();
+          if(jc.error) continue;
+          const cmap = {};
+          (jc.data||[]).forEach(c=>{ cmap[c.id]={name:c.name, st:c.effective_status, b:parseFloat(c.daily_budget)||0, act:0, abA:0, abT:0}; });
+          const pa = new URLSearchParams({fields:'campaign_id,effective_status,daily_budget',limit:'500',access_token:tk});
+          const ja = await (await fetch('https://graph.facebook.com/v21.0/'+acc+'/adsets?'+pa)).json();
+          if(!ja.error)(ja.data||[]).forEach(s2=>{
+            const c = cmap[s2.campaign_id]; if(!c) return;
+            const b = parseFloat(s2.daily_budget)||0;
+            if(s2.effective_status==='ACTIVE'){ c.act++; c.abA+=b; }
+            c.abT += b;
+          });
+          Object.values(cmap).forEach(c=>{
+            const budget = c.b || (c.act>0 ? c.abA : c.abT);
+            if(budget>0 || c.act>0) budgets.push({c:c.name, b:budget, act:c.act, st:c.st});
+          });
+        }catch(e){}
+      }
+      metaBudgetsTs = Date.now();
     }
 
     if(!metaData) metaData = {rows:[], daily:[], accounts:[], today:{}};
@@ -2465,8 +2442,9 @@ async function fetchMetaLive(showT){
       }
       if(accs.length) metaData.accounts = accs;
     }
-    metaData.rows  = (metaData.rows||[]).filter(r=>r.d!==today).concat(all);
-    const spend = all.reduce((s,r)=>s+r.s,0), leads = all.reduce((s,r)=>s+r.l,0);
+
+    metaData.rows = (metaData.rows||[]).filter(r=>r.d!==today).concat(all);
+    const spend = all.reduce((s2,r)=>s2+r.s,0), leads = all.reduce((s2,r)=>s2+r.l,0);
     metaData.today = {date:today, spend, leads,
       campaigns: all.slice().sort((a,b)=>b.s-a.s).map(r=>({account:r.a, campaign_name:r.c, spend:r.s, leads:r.l}))};
     metaData.daily = (metaData.daily||[]).filter(x=>x.date!==today).concat([{date:today, spend, leads}]);
@@ -2476,7 +2454,7 @@ async function fetchMetaLive(showT){
     if(showT) toast('⚡ Meta en vivo · '+fMeta(spend)+' hoy');
     return true;
   }catch(e){
-    if(showT) toast('❌ Token Meta: '+e.message);
+    if(showT) toast('❌ Meta: '+e.message);
     return false;
   }
 }
@@ -2484,13 +2462,24 @@ async function fetchMetaLive(showT){
 async function refreshMeta(showT){
   await loadMetaData(false);
   const live = await fetchMetaLive(false);
-  if(showT) toast(live ? '⚡ Actualizado EN VIVO desde Meta API' : '📡 Actualizado (sync GitHub · usa 🔑 Token para modo en vivo)');
+  if(showT) toast(live ? '⚡ Actualizado EN VIVO desde Meta API' : '📡 Actualizado (sync GitHub · usa 🔑 Token para el modo en vivo)');
 }
 
-// OPTIMIZACIÓN DE ANUNCIOS · CPA real por anuncio (requiere token)
+// ── OPTIMIZACIÓN DE ANUNCIOS ──
 let metaAdsCache = {key:'', ts:0, ads:null};
 let metaAdsMonthCache = {key:'', ts:0, ads:null};
-let adsOptTab = '';
+let adsOptTab = '', adsBlockedUntil = 0;
+const ADS_LS = 'vd_meta_ads_cache';
+
+function saveAdsLS(key, ads){
+  try{ localStorage.setItem(ADS_LS, JSON.stringify({key, ts:Date.now(),
+    ads: ads.map(a=>({acc:a.acc,id:a.id,name:a.name,camp:a.camp,spend:a.spend,leads:a.leads,st:a.st}))})); }catch(e){}
+}
+function loadAdsLS(key){
+  try{ const j = JSON.parse(localStorage.getItem(ADS_LS)||'null');
+    if(j && Array.isArray(j.ads) && (!key || j.key===key)) return j; }catch(e){}
+  return null;
+}
 
 async function fetchAdsRange(since, until, cacheObj, force){
   const tk = localStorage.getItem(LMT);
@@ -2502,39 +2491,44 @@ async function fetchAdsRange(since, until, cacheObj, force){
     try{
       const p = new URLSearchParams({
         fields:'ad_id,ad_name,campaign_name,spend,actions', level:'ad',
-        time_range: JSON.stringify({since, until}),
-        limit:'1000', access_token: tk
+        time_range: JSON.stringify({since, until}), limit:'1000', access_token: tk
       });
       const j = await (await fetch('https://graph.facebook.com/v21.0/'+acc+'/insights?'+p)).json();
       if(j.error) throw new Error(j.error.message);
-      (j.data||[]).forEach(x=>out.push({
-        acc, id:String(x.ad_id||''), name:x.ad_name||'', camp:x.campaign_name||'',
-        spend:parseFloat(x.spend)||0, leads:metaLeadsFromActions(x.actions), st:''
-      }));
-    }catch(e){ errs.push(acc+': '+e.message); }
+      (j.data||[]).forEach(x=>out.push({acc, id:String(x.ad_id||''), name:x.ad_name||'',
+        camp:x.campaign_name||'', spend:parseFloat(x.spend)||0, leads:metaLeadsFromActions(x.actions), st:''}));
+    }catch(e){ errs.push(accLabel(acc)+': '+e.message); }
   }
   if(!out.length && errs.length) throw new Error(errs.join(' · '));
-  out.errs = errs;
+  // Estado de los anuncios + activos sin gasto en el período
   try{
     for(const acc of META_ACCOUNTS){
       const ps = new URLSearchParams({fields:'id,name,effective_status,campaign{name}',limit:'1000',access_token:tk});
       const js2 = await (await fetch('https://graph.facebook.com/v21.0/'+acc+'/ads?'+ps)).json();
-      if(!js2.error){
-        const idx = {}; out.forEach(o=>{ if(o.acc===acc) idx[o.id]=o; });
-        (js2.data||[]).forEach(a=>{
-          const o = idx[a.id];
-          if(o){ o.st = a.effective_status; }
-          else if(a.effective_status==='ACTIVE'){
-            // Activo pero SIN gasto en el período — también se muestra
-            out.push({acc, id:String(a.id), name:a.name||'', camp:(a.campaign&&a.campaign.name)||'',
-              spend:0, leads:0, st:'ACTIVE'});
-          }
-        });
-      }
+      if(js2.error) continue;
+      const idx = {}; out.forEach(o=>{ if(o.acc===acc) idx[o.id]=o; });
+      (js2.data||[]).forEach(a=>{
+        const o = idx[a.id];
+        if(o){ o.st = a.effective_status; }
+        else if(a.effective_status==='ACTIVE'){
+          out.push({acc, id:String(a.id), name:a.name||'', camp:(a.campaign&&a.campaign.name)||'',
+            spend:0, leads:0, st:'ACTIVE'});
+        }
+      });
     }
   }catch(e){}
+  out.errs = errs;
   cacheObj.key = key; cacheObj.ts = Date.now(); cacheObj.ads = out;
+  if(out.length) saveAdsLS(key, out);
   return out;
+}
+
+function accLabel(id){
+  if(!id) return 'Sin datos Meta';
+  if(META_ACC_LABELS[id]) return META_ACC_LABELS[id] + (META_ACC_BM[id]?' · '+META_ACC_BM[id]:'');
+  const a = ((metaData&&metaData.accounts)||[]).find(x=>x.id===id);
+  if(a && a.name && !/^act_/.test(a.name)) return a.name + (a.biz?' · '+a.biz:'');
+  return id;
 }
 
 function salesByAd(from, to){
@@ -2546,7 +2540,6 @@ function salesByAd(from, to){
   });
   return m;
 }
-
 function matchSales(ad, sales, used){
   let v = sales[ad.id]||0;
   if(v){ if(used) used.add(ad.id); return v; }
@@ -2565,21 +2558,53 @@ async function renderAdsOpt(force){
     el.innerHTML = '<div class="dropi-hist-empty">Pega tu 🔑 Token en "Meta Ads" para activar este análisis.</div>';
     return;
   }
-  el.innerHTML = '<div class="dropi-hist-empty">Analizando anuncios del período…</div>';
-
   const nHoy = new Date();
   const mStart = ymd(new Date(nHoy.getFullYear(), nHoy.getMonth(), 1));
   const hoy = ymd(nHoy);
-  let adsP, adsM;
+  const pKey = curFrom+'_'+curTo;
+
+  // Si Meta bloqueó hace poco, no insistas solo (cada reintento empeora la tasa de error)
+  if(!force && Date.now() < adsBlockedUntil){
+    const c = loadAdsLS(pKey);
+    if(c){ paintAdsOpt(c.ads, c.ads, true, c.ts, ['Meta limitó las consultas · reintenta con ↺ Analizar']); return; }
+    el.innerHTML = '<div class="dropi-hist-empty">⏳ Meta limitó temporalmente las consultas. Espera unos minutos y pulsa ↺ Analizar.</div>';
+    return;
+  }
+
+  el.innerHTML = '<div class="dropi-hist-empty">Analizando anuncios del período…</div>';
+  let adsP, adsM, stale=false, staleTs=0, warns=[];
   try{
     adsP = await fetchAdsRange(curFrom, curTo, metaAdsCache, force);
     adsM = (curFrom===mStart && curTo===hoy) ? adsP : await fetchAdsRange(mStart, hoy, metaAdsMonthCache, force);
-  }catch(e){ el.innerHTML = '<div class="dropi-hist-empty">Error Meta: '+e.message+'</div>'; return; }
+  }catch(e){
+    const blocked = /blocked|limit|too many|reduce the amount/i.test(e.message||'');
+    if(blocked) adsBlockedUntil = Date.now() + 900000;
+    const c = loadAdsLS(pKey) || loadAdsLS(null);
+    if(c){
+      adsP = c.ads; adsM = c.ads; stale = true; staleTs = c.ts;
+      warns.push(blocked ? 'Meta limitó las consultas — mostrando los últimos datos guardados'
+                         : 'Error Meta: '+e.message+' — mostrando datos guardados');
+    }else{
+      el.innerHTML = '<div class="dropi-hist-empty">'+(blocked
+        ? '⏳ Meta limitó temporalmente las consultas (rate limit de la API). No es tu dashboard ni GitHub — espera unos minutos y pulsa ↺ Analizar.'
+        : 'Error Meta: '+e.message)+'</div>';
+      return;
+    }
+  }
   if(!adsP) return;
+  if(adsP.errs && adsP.errs.length) warns = warns.concat(adsP.errs);
+  paintAdsOpt(adsP, adsM, stale, staleTs, warns);
+}
+
+function paintAdsOpt(adsP, adsM, stale, staleTs, warns){
+  const el = document.getElementById('adsopt-body');
+  if(!el) return;
+  const nHoy = new Date();
+  const mStart = ymd(new Date(nHoy.getFullYear(), nHoy.getMonth(), 1));
+  const hoy = ymd(nHoy);
 
   const salesP = salesByAd(curFrom, curTo);
   const salesM = salesByAd(mStart, hoy);
-
   const monthById = {};
   (adsM||[]).forEach(a=>{ monthById[a.id] = {spend:a.spend, ventas:matchSales(a, salesM)}; });
 
@@ -2598,28 +2623,14 @@ async function renderAdsOpt(force){
       ventas:v, cpa:0, vM:salesM[k]||0, cpaM:0, prod:'—'});
   });
 
-  // Pestañas por cuenta
-  const accNm = id => {
-    if(!id) return 'Sin datos Meta';
-    if(typeof META_ACC_LABELS!=='undefined' && META_ACC_LABELS[id]){
-      const bm = (typeof META_ACC_BM!=='undefined' && META_ACC_BM[id]) ? ' · '+META_ACC_BM[id] : '';
-      return META_ACC_LABELS[id] + bm;
-    }
-    const a = ((metaData&&metaData.accounts)||[]).find(x=>x.id===id);
-    if(a && a.name && !/^act_/.test(a.name)) return a.name + (a.biz?' · '+a.biz:'');
-    return id;
-  };
   const accIds = [...new Set(rows.map(r=>r.acc||'otros'))];
   if(!adsOptTab || !accIds.includes(adsOptTab)) adsOptTab = accIds[0]||'';
   const tabRows = rows.filter(r=>(r.acc||'otros')===adsOptTab);
 
-  // Agrupar por producto
   const byProd = {};
   tabRows.forEach(r=>{ (byProd[r.prod] = byProd[r.prod]||[]).push(r); });
   const prodOrder = Object.entries(byProd)
-    .map(([p,list])=>({p, list,
-      spend: list.reduce((s,x)=>s+x.spend,0),
-      ventas: list.reduce((s,x)=>s+x.ventas,0)}))
+    .map(([p,list])=>({p, list, spend:list.reduce((s,x)=>s+x.spend,0), ventas:list.reduce((s,x)=>s+x.ventas,0)}))
     .sort((a,b)=>b.spend-a.spend);
 
   const cpaColor = c => c<=13000 ? '#34d399' : c<=17000 ? '#fb923c' : '#f87171';
@@ -2632,45 +2643,52 @@ async function renderAdsOpt(force){
     : '<span title="'+(st||'?')+'" style="color:rgba(255,255,255,.3)">●</span>';
 
   const GRID = '16px minmax(120px,1.3fr) 85px 44px 100px 58px 100px';
-  const head = `<div style="display:grid;grid-template-columns:${GRID};gap:8px;padding:6px 10px;font-size:.58rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:rgba(255,255,255,.35)">
-    <span></span><span>Anuncio</span><span style="text-align:right">Gasto</span><span style="text-align:center">Vtas</span><span style="text-align:right">CPA período</span><span style="text-align:center">Vtas mes</span><span style="text-align:right">CPA mes</span></div>`;
-  const row = a => `<div style="display:grid;grid-template-columns:${GRID};align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid rgba(255,255,255,.05)">
-    <span style="text-align:center">${stDot(a.st)}</span>
-    <div style="overflow:hidden"><div style="font-size:.76rem;font-weight:700;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${a.name||a.id}">${a.id}</div></div>
-    <span style="font-size:.78rem;font-weight:800;color:#f8fafc;text-align:right">${fMeta(a.spend)}</span>
-    <span style="font-size:.78rem;font-weight:800;color:${a.ventas>0?'#34d399':'#f87171'};text-align:center">${a.ventas}</span>
-    <span style="text-align:right">${a.spend>0||a.ventas>0 ? cpaChip(a.cpa, a.ventas) : '<span style="font-size:.72rem;color:rgba(255,255,255,.3)">—</span>'}</span>
-    <span style="font-size:.78rem;font-weight:800;color:${a.vM>0?'#a7f3d0':'rgba(255,255,255,.35)'};text-align:center">${a.vM}</span>
-    <span style="text-align:right">${a.vM>0 ? cpaChip(a.cpaM, a.vM) : '<span style="font-size:.72rem;color:rgba(255,255,255,.3)">—</span>'}</span>
-  </div>`;
+  const head = '<div style="display:grid;grid-template-columns:'+GRID+';gap:8px;padding:6px 10px;font-size:.58rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:rgba(255,255,255,.35)">'
+    +'<span></span><span>Anuncio</span><span style="text-align:right">Gasto</span><span style="text-align:center">Vtas</span><span style="text-align:right">CPA período</span><span style="text-align:center">Vtas mes</span><span style="text-align:right">CPA mes</span></div>';
+  const row = a => '<div style="display:grid;grid-template-columns:'+GRID+';align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid rgba(255,255,255,.05)">'
+    +'<span style="text-align:center">'+stDot(a.st)+'</span>'
+    +'<div style="overflow:hidden"><div style="font-size:.76rem;font-weight:700;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+(a.name||a.id)+'">'+a.id+'</div></div>'
+    +'<span style="font-size:.78rem;font-weight:800;color:#f8fafc;text-align:right">'+fMeta(a.spend)+'</span>'
+    +'<span style="font-size:.78rem;font-weight:800;color:'+(a.ventas>0?'#34d399':'#f87171')+';text-align:center">'+a.ventas+'</span>'
+    +'<span style="text-align:right">'+(a.spend>0||a.ventas>0 ? cpaChip(a.cpa,a.ventas) : '<span style="font-size:.72rem;color:rgba(255,255,255,.3)">—</span>')+'</span>'
+    +'<span style="font-size:.78rem;font-weight:800;color:'+(a.vM>0?'#a7f3d0':'rgba(255,255,255,.35)')+';text-align:center">'+a.vM+'</span>'
+    +'<span style="text-align:right">'+(a.vM>0 ? cpaChip(a.cpaM,a.vM) : '<span style="font-size:.72rem;color:rgba(255,255,255,.3)">—</span>')+'</span></div>';
 
   const tabs = accIds.map(id=>
-    '<button onclick="adsOptTab=\''+id+'\';renderAdsOpt()" style="background:'+(id===adsOptTab?'rgba(99,102,241,.25)':'rgba(255,255,255,.06)')+
-    ';border:1.5px solid '+(id===adsOptTab?'#818cf8':'rgba(255,255,255,.12)')+
-    ';color:'+(id===adsOptTab?'#c7d2fe':'rgba(255,255,255,.5)')+
-    ';padding:6px 16px;border-radius:8px;font-size:.78rem;font-weight:800;cursor:pointer;font-family:var(--font)">'+accNm(id)+'</button>'
+    '<button onclick="adsOptTab=\''+id+'\';paintAdsOptRefresh()" style="background:'+(id===adsOptTab?'rgba(99,102,241,.25)':'rgba(255,255,255,.06)')
+    +';border:1.5px solid '+(id===adsOptTab?'#818cf8':'rgba(255,255,255,.12)')
+    +';color:'+(id===adsOptTab?'#c7d2fe':'rgba(255,255,255,.5)')
+    +';padding:6px 16px;border-radius:8px;font-size:.78rem;font-weight:800;cursor:pointer;font-family:var(--font)">'+accLabel(id==='otros'?'':id)+'</button>'
   ).join('');
 
-  const warn = (adsP.errs && adsP.errs.length)
-    ? '<div style="background:rgba(251,146,60,.1);border:1px solid rgba(251,146,60,.3);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:.72rem;color:#fdba74">⚠️ Sin datos de: '+adsP.errs.join(' · ')+'</div>' : '';
-  el.innerHTML = `
-    ${warn}
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">${tabs}</div>
-    ${prodOrder.length ? prodOrder.map(g=>{
-      const conV = g.list.filter(x=>x.ventas>0).sort((a,b)=>b.spend-a.spend);
-      const sinV = g.list.filter(x=>x.ventas===0 && x.spend>0).sort((a,b)=>b.spend-a.spend);
-      const sinG = g.list.filter(x=>x.ventas===0 && x.spend===0);
-      const gastoSin = sinV.reduce((s,x)=>s+x.spend,0);
-      return `<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;overflow:hidden;margin-bottom:12px">
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(255,255,255,.04);flex-wrap:wrap;gap:6px">
-          <span style="font-size:.84rem;font-weight:800;color:#f8fafc">📦 ${g.p}</span>
-          <span style="font-size:.7rem;font-weight:700;color:rgba(255,255,255,.5)">${fMeta(g.spend)} · ${g.ventas} ventas${sinV.length?' · <span style="color:#f87171">'+sinV.length+' sin vender ('+fMeta(gastoSin)+')</span>':''}${sinG.length?' · <span style="color:rgba(255,255,255,.35)">'+sinG.length+' activos sin gasto</span>':''}</span>
-        </div>
-        ${head}
-        <div style="max-height:300px;overflow-y:auto">${conV.map(row).join('')}${sinV.map(row).join('')}${sinG.map(row).join('')}</div>
-      </div>`;
-    }).join('') : '<div class="dropi-hist-empty">Sin anuncios en esta cuenta para el período</div>'}
-  `;
+  const warnList = (warns||[]).slice();
+  if(stale && staleTs) warnList.push('Datos guardados del '+new Date(staleTs).toLocaleString('es-CO',{timeZone:'America/Bogota'}));
+  const warn = warnList.length
+    ? '<div style="background:rgba(251,146,60,.1);border:1px solid rgba(251,146,60,.3);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:.72rem;color:#fdba74">⚠️ '+warnList.join(' · ')+'</div>' : '';
+
+  window._adsOptLast = {adsP, adsM, stale, staleTs, warns};
+
+  el.innerHTML = warn
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">'+tabs+'</div>'
+    + (prodOrder.length ? prodOrder.map(g=>{
+        const conV = g.list.filter(x=>x.ventas>0).sort((a,b)=>b.spend-a.spend);
+        const sinV = g.list.filter(x=>x.ventas===0 && x.spend>0).sort((a,b)=>b.spend-a.spend);
+        const sinG = g.list.filter(x=>x.ventas===0 && x.spend===0);
+        const gastoSin = sinV.reduce((s,x)=>s+x.spend,0);
+        return '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;overflow:hidden;margin-bottom:12px">'
+          +'<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(255,255,255,.04);flex-wrap:wrap;gap:6px">'
+          +'<span style="font-size:.84rem;font-weight:800;color:#f8fafc">📦 '+g.p+'</span>'
+          +'<span style="font-size:.7rem;font-weight:700;color:rgba(255,255,255,.5)">'+fMeta(g.spend)+' · '+g.ventas+' ventas'
+          +(sinV.length?' · <span style="color:#f87171">'+sinV.length+' sin vender ('+fMeta(gastoSin)+')</span>':'')
+          +(sinG.length?' · <span style="color:rgba(255,255,255,.35)">'+sinG.length+' activos sin gasto</span>':'')
+          +'</span></div>'+head
+          +'<div style="max-height:300px;overflow-y:auto">'+conV.map(row).join('')+sinV.map(row).join('')+sinG.map(row).join('')+'</div></div>';
+      }).join('') : '<div class="dropi-hist-empty">Sin anuncios en esta cuenta para el período</div>');
+}
+
+function paintAdsOptRefresh(){
+  const L = window._adsOptLast;
+  if(L) paintAdsOpt(L.adsP, L.adsM, L.stale, L.staleTs, L.warns);
 }
 
 function renderMeta(){
@@ -2683,7 +2701,7 @@ function renderMeta(){
   const leads = rows.reduce((s,r)=>s+r.l,0);
   const cpl   = leads>0 ? inv/leads : 0;
   const t     = metaData.today || {};
-  const nCuentas = (metaData.accounts||[]).filter(a=>a.status===1).length;
+  const nCuentas = (metaData.accounts||[]).filter(a=>a.status===1).length || META_ACCOUNTS.length;
 
   const prods = {};
   rows.forEach(r=>{
@@ -2694,39 +2712,27 @@ function renderMeta(){
   const ps = Object.entries(prods).sort((a,b)=>b[1].inv-a[1].inv);
   const maxInv = ps.length ? ps[0][1].inv : 1;
 
-  // TODAS las campañas de hoy (con scroll)
-  const camps = (t.campaigns||[]).slice().sort((a,b)=>b.spend-a.spend);
-  const maxCamp = camps.length ? Math.max(camps[0].spend,1) : 1;
+  const stMap = {};
+  (metaData.budgets||[]).forEach(b=>{ stMap[String(b.c||'').trim()] = b.act>0; });
+  const campOn = nm => stMap[String(nm||'').trim()] === true;
 
-  // Gasto por cuenta
+  const camps = (t.campaigns||[]).slice().sort((a,b)=>b.spend-a.spend);
+  const campsShow = camps.filter(c=>c.spend>0 || campOn(c.campaign_name));
+  const maxCampS = campsShow.length ? Math.max(campsShow[0].spend,1) : 1;
+
   const accAgg = {};
   rows.forEach(r=>{ if(!accAgg[r.a]) accAgg[r.a]={s:0,l:0}; accAgg[r.a].s+=r.s; accAgg[r.a].l+=r.l; });
   const accPal = ['#fbbf24','#34d399','#60a5fa','#a78bfa','#f87171','#f472b6'];
   const accRows = Object.entries(accAgg).sort((a,b)=>b[1].s-a[1].s);
   const maxAcc = accRows.length ? Math.max(accRows[0][1].s,1) : 1;
-  const accName = id => {
-    const a=(metaData.accounts||[]).find(x=>x.id===id);
-    return (a&&a.name&&!/^act_/.test(a.name)) ? a.name : (META_ACC_LABELS[id]||id);
-  };
-  const accBiz  = id => { if(META_ACC_BM[id]) return META_ACC_BM[id];
-    const a=(metaData.accounts||[]).find(x=>x.id===id); return (a&&a.biz)||''; };
-  const stMap = {};
-  (metaData.budgets||[]).forEach(b=>{ stMap[String(b.c||'').trim()] = b.act>0; });
-  const campOn = nm => stMap[String(nm||'').trim()] === true;
-  const campsShow = camps.filter(c=>c.spend>0 || campOn(c.campaign_name));
-  const maxCampS = campsShow.length ? Math.max(campsShow[0].spend,1) : 1;
-  const accHtml = accRows.length ? `
-    <div class="dropi-compare" style="margin-top:0;margin-bottom:12px">
-      <div class="dc-title">💼 Gasto por cuenta · ${curFrom===curTo?fmtDisp(curFrom):fmtDisp(curFrom)+' – '+fmtDisp(curTo)}</div>
-      ${accRows.map(([id,v],i)=>`
-        <div class="dc-row">
-          <span class="dc-label" style="color:${accPal[i%accPal.length]};font-weight:800">${accName(id)}</span>
-          <div class="dc-bar-track"><div class="dc-bar-fill" style="width:${Math.round(v.s/maxAcc*100)}%;background:${accPal[i%accPal.length]}"></div></div>
-          <span class="dc-pct" style="color:#f8fafc;width:auto;min-width:180px">${fMeta(v.s)} · ${v.l} leads${v.l>0?' · CPL '+fMeta(v.s/v.l):''}</span>
-        </div>`).join('')}
-    </div>` : '';
+  const accHtml = accRows.length ? '<div class="dropi-compare" style="margin-top:0;margin-bottom:12px">'
+    +'<div class="dc-title">💼 Gasto por cuenta · '+(curFrom===curTo?fmtDisp(curFrom):fmtDisp(curFrom)+' – '+fmtDisp(curTo))+'</div>'
+    +accRows.map(([id,v],i)=>'<div class="dc-row">'
+      +'<span class="dc-label" style="color:'+accPal[i%accPal.length]+';font-weight:800">'+accLabel(id)+'</span>'
+      +'<div class="dc-bar-track"><div class="dc-bar-fill" style="width:'+Math.round(v.s/maxAcc*100)+'%;background:'+accPal[i%accPal.length]+'"></div></div>'
+      +'<span class="dc-pct" style="color:#f8fafc;width:auto;min-width:180px">'+fMeta(v.s)+' · '+v.l+' leads'+(v.l>0?' · CPL '+fMeta(v.s/v.l):'')+'</span></div>').join('')
+    +'</div>' : '';
 
-  // Presupuesto del día — SOLO productos con campañas encendidas
   let budgetHtml = '';
   if(Array.isArray(metaData.budgets) && metaData.budgets.length){
     const todayD = (metaData.today && metaData.today.date) || ymd(new Date());
@@ -2744,72 +2750,53 @@ function renderMeta(){
     const totB = Object.values(bp).reduce((s,x)=>s+x.b,0);
     const totS = Object.keys(bp).reduce((s,p)=>s+(spentByProd[p]||0),0);
     const rowsB = Object.entries(bp).sort((a,b)=>b[1].b-a[1].b);
-    if(rowsB.length) budgetHtml = `<div class="dropi-compare" style="margin-top:0;margin-bottom:12px">
-      <div class="dc-title">💰 Presupuesto del día por producto · solo campañas activas</div>
-      ${rowsB.map(([p,x])=>{
+    if(rowsB.length) budgetHtml = '<div class="dropi-compare" style="margin-top:0;margin-bottom:12px">'
+      +'<div class="dc-title">💰 Presupuesto del día por producto · solo campañas activas</div>'
+      +rowsB.map(([p,x])=>{
         const sp  = spentByProd[p]||0;
         const pct = x.b>0 ? Math.min(100, Math.round(sp/x.b*100)) : 0;
         const shareB = totB>0 ? Math.round(x.b/totB*100) : 0;
-        return `<div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:10px;padding:12px 14px;margin-bottom:8px">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
-            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-              <span style="font-size:.92rem;font-weight:800;color:#f8fafc">${p}</span>
-              <span style="font-size:.68rem;font-weight:700;background:rgba(255,255,255,.08);color:rgba(255,255,255,.55);padding:2px 9px;border-radius:20px">${shareB}% del presupuesto</span>
-              <span style="font-size:.68rem;font-weight:700;background:rgba(52,211,153,.15);color:#34d399;padding:2px 9px;border-radius:20px">${x.act} activos</span>
-            </div>
-            <div style="text-align:right"><span style="font-size:1.05rem;font-weight:800;color:#f8fafc">${fMeta(x.b)}</span> <span style="font-size:.68rem;color:rgba(255,255,255,.4)">presupuesto</span></div>
-          </div>
-          <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
-            <span style="font-size:.72rem;color:rgba(255,255,255,.45);white-space:nowrap">Ejecución del presupuesto</span>
-            <div class="dc-bar-track" style="flex:1"><div class="dc-bar-fill" style="width:${pct}%;background:#22c55e"></div></div>
-            <span style="font-size:.78rem;font-weight:800;color:#34d399;white-space:nowrap">${fMeta(sp)} · ${pct}%</span>
-          </div>
-        </div>`;
-      }).join('')}
-      <div style="background:linear-gradient(135deg,#064e3b,#052e22);border:1px solid rgba(52,211,153,.3);border-radius:10px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;margin-top:4px;flex-wrap:wrap;gap:8px">
-        <span style="font-size:.85rem;font-weight:700;color:#a7f3d0">💰 Presupuesto total del día</span>
-        <div style="text-align:right">
-          <div style="font-size:1.2rem;font-weight:800;color:#fff">${fMeta(totB)}</div>
-          <div style="font-size:.72rem;font-weight:700;color:#34d399">${fMeta(totS)} gastado · ${totB>0?Math.min(100,Math.round(totS/totB*100)):0}% ejecutado</div>
-        </div>
-      </div>
-    </div>`;
+        return '<div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:10px;padding:12px 14px;margin-bottom:8px">'
+          +'<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">'
+          +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+          +'<span style="font-size:.92rem;font-weight:800;color:#f8fafc">'+p+'</span>'
+          +'<span style="font-size:.68rem;font-weight:700;background:rgba(255,255,255,.08);color:rgba(255,255,255,.55);padding:2px 9px;border-radius:20px">'+shareB+'% del presupuesto</span>'
+          +'<span style="font-size:.68rem;font-weight:700;background:rgba(52,211,153,.15);color:#34d399;padding:2px 9px;border-radius:20px">'+x.act+' activos</span>'
+          +'</div><div style="text-align:right"><span style="font-size:1.05rem;font-weight:800;color:#f8fafc">'+fMeta(x.b)+'</span> <span style="font-size:.68rem;color:rgba(255,255,255,.4)">presupuesto</span></div></div>'
+          +'<div style="display:flex;align-items:center;gap:10px;margin-top:8px">'
+          +'<span style="font-size:.72rem;color:rgba(255,255,255,.45);white-space:nowrap">Ejecución del presupuesto</span>'
+          +'<div class="dc-bar-track" style="flex:1"><div class="dc-bar-fill" style="width:'+pct+'%;background:#22c55e"></div></div>'
+          +'<span style="font-size:.78rem;font-weight:800;color:#34d399;white-space:nowrap">'+fMeta(sp)+' · '+pct+'%</span></div></div>';
+      }).join('')
+      +'<div style="background:linear-gradient(135deg,#064e3b,#052e22);border:1px solid rgba(52,211,153,.3);border-radius:10px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;margin-top:4px;flex-wrap:wrap;gap:8px">'
+      +'<span style="font-size:.85rem;font-weight:700;color:#a7f3d0">💰 Presupuesto total del día</span>'
+      +'<div style="text-align:right"><div style="font-size:1.2rem;font-weight:800;color:#fff">'+fMeta(totB)+'</div>'
+      +'<div style="font-size:.72rem;font-weight:700;color:#34d399">'+fMeta(totS)+' gastado · '+(totB>0?Math.min(100,Math.round(totS/totB*100)):0)+'% ejecutado</div></div></div></div>';
   }
 
-  el.innerHTML = `
-    <div class="dropi-kpis" style="grid-template-columns:repeat(4,1fr)">
-      <div class="dk"><div class="dk-lbl">💸 Gasto período</div><div class="dk-val" style="color:#fbbf24">${fMeta(inv)}</div><div class="dk-sub" style="color:rgba(255,255,255,.5)">${curFrom===curTo?'día seleccionado':fmtDisp(curFrom)+' – '+fmtDisp(curTo)}</div></div>
-      <div class="dk"><div class="dk-lbl">👥 Leads período</div><div class="dk-val" style="color:#34d399">${leads.toLocaleString('es-CO')}</div><div class="dk-sub" style="color:rgba(255,255,255,.5)">chats + formularios</div></div>
-      <div class="dk"><div class="dk-lbl">📉 Costo x Lead</div><div class="dk-val" style="color:#a78bfa">${cpl>0?fMeta(cpl):'—'}</div><div class="dk-sub" style="color:rgba(255,255,255,.5)">promedio período</div></div>
-      <div class="dk"><div class="dk-lbl">🏦 Cuentas activas</div><div class="dk-val" style="color:#f8fafc">${nCuentas}</div><div class="dk-sub" style="color:rgba(255,255,255,.5)">hoy: ${fMeta(t.spend||0)} · ${t.leads||0} leads</div></div>
-    </div>
-    ${budgetHtml}
-    ${accHtml}
-    ${ps.length?`
-    <div class="dropi-compare" style="margin-top:0;margin-bottom:12px">
-      <div class="dc-title">📦 Gasto por producto · período seleccionado</div>
-      ${ps.map(([p,v])=>`
-        <div class="dc-row">
-          <span class="dc-label" title="${p}">${p}</span>
-          <div class="dc-bar-track"><div class="dc-bar-fill" style="width:${Math.round(v.inv/maxInv*100)}%;background:#818cf8"></div></div>
-          <span class="dc-pct" style="color:#c7d2fe;width:auto;min-width:150px">${fMeta(v.inv)} · ${v.leads} leads${v.leads>0?' · CPL '+fMeta(v.inv/v.leads):''}</span>
-        </div>`).join('')}
-    </div>`:''}
-    ${campsShow.length?`
-    <div class="dropi-compare" style="margin-top:0">
-      <div class="dc-title">📣 Campañas de hoy · ${campsShow.length} con actividad · desliza para ver todas</div>
-      <div style="max-height:300px;overflow-y:auto;padding-right:4px">
-      ${campsShow.map(c=>`
-        <div style="display:grid;grid-template-columns:10px minmax(140px,1.1fr) auto 1fr 125px;align-items:center;gap:8px;padding:3px 0">
-          <span style="font-size:.6rem;color:${campOn(c.campaign_name)?'#34d399':'rgba(255,255,255,.25)'}" title="${campOn(c.campaign_name)?'Encendida':'Apagada'}">●</span>
-          <span style="font-size:.7rem;font-weight:600;color:rgba(255,255,255,.75);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${c.campaign_name}">${c.campaign_name}</span>
-          <span style="font-size:.6rem;font-weight:700;color:rgba(255,255,255,.4);background:rgba(255,255,255,.07);padding:1px 8px;border-radius:12px;white-space:nowrap">${accName(c.account)}${accBiz(c.account)?' · '+accBiz(c.account):''}</span>
-          <div style="height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden"><div style="height:100%;width:${Math.round(c.spend/maxCampS*100)}%;background:#34d399;border-radius:2px"></div></div>
-          <span style="font-size:.7rem;font-weight:800;color:#6ee7b7;text-align:right;white-space:nowrap">${fMeta(c.spend)} · ${c.leads} leads</span>
-        </div>`).join('')}
-      </div>
-    </div>`:''}
-  `;
+  el.innerHTML = '<div class="dropi-kpis" style="grid-template-columns:repeat(4,1fr)">'
+    +'<div class="dk"><div class="dk-lbl">💸 Gasto período</div><div class="dk-val" style="color:#fbbf24">'+fMeta(inv)+'</div><div class="dk-sub" style="color:rgba(255,255,255,.5)">'+(curFrom===curTo?'día seleccionado':fmtDisp(curFrom)+' – '+fmtDisp(curTo))+'</div></div>'
+    +'<div class="dk"><div class="dk-lbl">👥 Leads período</div><div class="dk-val" style="color:#34d399">'+leads.toLocaleString('es-CO')+'</div><div class="dk-sub" style="color:rgba(255,255,255,.5)">chats + formularios</div></div>'
+    +'<div class="dk"><div class="dk-lbl">📉 Costo x Lead</div><div class="dk-val" style="color:#a78bfa">'+(cpl>0?fMeta(cpl):'—')+'</div><div class="dk-sub" style="color:rgba(255,255,255,.5)">promedio período</div></div>'
+    +'<div class="dk"><div class="dk-lbl">🏦 Cuentas activas</div><div class="dk-val" style="color:#f8fafc">'+nCuentas+'</div><div class="dk-sub" style="color:rgba(255,255,255,.5)">hoy: '+fMeta(t.spend||0)+' · '+(t.leads||0)+' leads</div></div></div>'
+    + budgetHtml + accHtml
+    + (ps.length ? '<div class="dropi-compare" style="margin-top:0;margin-bottom:12px">'
+        +'<div class="dc-title">📦 Gasto por producto · período seleccionado</div>'
+        +ps.map(([p,v])=>'<div class="dc-row"><span class="dc-label" title="'+p+'">'+p+'</span>'
+          +'<div class="dc-bar-track"><div class="dc-bar-fill" style="width:'+Math.round(v.inv/maxInv*100)+'%;background:#818cf8"></div></div>'
+          +'<span class="dc-pct" style="color:#c7d2fe;width:auto;min-width:150px">'+fMeta(v.inv)+' · '+v.leads+' leads'+(v.leads>0?' · CPL '+fMeta(v.inv/v.leads):'')+'</span></div>').join('')
+        +'</div>' : '')
+    + (campsShow.length ? '<div class="dropi-compare" style="margin-top:0">'
+        +'<div class="dc-title">📣 Campañas de hoy · '+campsShow.length+' con actividad · desliza para ver todas</div>'
+        +'<div style="max-height:300px;overflow-y:auto;padding-right:4px">'
+        +campsShow.map(c=>'<div style="display:grid;grid-template-columns:10px minmax(140px,1.1fr) auto 1fr 125px;align-items:center;gap:8px;padding:3px 0">'
+          +'<span style="font-size:.6rem;color:'+(campOn(c.campaign_name)?'#34d399':'rgba(255,255,255,.25)')+'" title="'+(campOn(c.campaign_name)?'Encendida':'Apagada')+'">●</span>'
+          +'<span style="font-size:.7rem;font-weight:600;color:rgba(255,255,255,.75);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+c.campaign_name+'">'+c.campaign_name+'</span>'
+          +'<span style="font-size:.6rem;font-weight:700;color:rgba(255,255,255,.4);background:rgba(255,255,255,.07);padding:1px 8px;border-radius:12px;white-space:nowrap">'+accLabel(c.account)+'</span>'
+          +'<div style="height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden"><div style="height:100%;width:'+Math.round(c.spend/maxCampS*100)+'%;background:#34d399;border-radius:2px"></div></div>'
+          +'<span style="font-size:.7rem;font-weight:800;color:#6ee7b7;text-align:right;white-space:nowrap">'+fMeta(c.spend)+' · '+c.leads+' leads</span></div>').join('')
+        +'</div></div>' : '');
+
   const upd = document.getElementById('meta-upd');
   if(upd) upd.textContent = '🕐 ' + (metaData.updated_at_co || '—');
 }
@@ -2819,36 +2806,27 @@ function applyMetaAutofill(date, combos){
   if(!metaData || !Array.isArray(metaData.rows)) return;
   const dayRows = metaData.rows.filter(r=>r.d===date);
   if(!dayRows.length) return;
-
   const metaProd = {};
   dayRows.forEach(r=>{
     const p = metaProductFromCampaign(r.c);
     if(!metaProd[p]) metaProd[p] = {inv:0, leads:0};
     metaProd[p].inv += r.s; metaProd[p].leads += r.l;
   });
-
-  const norm = s => String(s||'').toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+  const norm = s2 => String(s2||'').toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
   const matches = {};
   Object.entries(combos).forEach(([key,c])=>{
     const np = norm(c.prod);
     Object.keys(metaProd).forEach(mp=>{
-      if(np.includes(mp) || (np.length>=4 && mp.includes(np))){
-        (matches[mp] = matches[mp]||[]).push(key);
-      }
+      if(np.includes(mp) || (np.length>=4 && mp.includes(np))) (matches[mp] = matches[mp]||[]).push(key);
     });
   });
-
   let changed = false;
   Object.entries(matches).forEach(([mp, keys])=>{
-    const totV = keys.reduce((s,k)=>s+combos[k].ventas,0);
+    const totV = keys.reduce((s2,k)=>s2+combos[k].ventas,0);
     keys.forEach(k=>{
       const share = totV>0 ? combos[k].ventas/totV : 1/keys.length;
-      pautaData[k] = {
-        inv:   String(Math.round(metaProd[mp].inv  * share)),
-        leads: String(Math.round(metaProd[mp].leads* share)),
-        ts: 'auto · Meta API',
-        auto: true
-      };
+      pautaData[k] = { inv:String(Math.round(metaProd[mp].inv*share)),
+        leads:String(Math.round(metaProd[mp].leads*share)), ts:'auto · Meta API', auto:true };
       changed = true;
     });
   });
@@ -3211,8 +3189,7 @@ function renderPautaSummary(){
     totalInv   += parseFloat(String(d.inv||'').replace(/[^0-9.]/g,''))||0;
     totalLeads += parseFloat(String(d.leads||'').replace(/[^0-9.]/g,''))||0;
   });
-  // Con Meta conectado: usar el gasto y leads GENERALES del día (TODAS las campañas,
-  // incluidas las de productos que aún no venden)
+  // Con Meta conectado: usar gasto y leads GENERALES del día (TODAS las campañas)
   if(typeof metaData!=='undefined' && metaData && Array.isArray(metaData.rows)){
     const mRows = metaData.rows.filter(r=>r.d===activeDate);
     if(mRows.length){
