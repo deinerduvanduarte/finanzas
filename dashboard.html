@@ -599,7 +599,7 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
       <div class="dropi-header">
         <div>
           <div class="dropi-title">🎯 Optimización de anuncios · CPA real</div>
-          <div class="dropi-sub">Gasto Meta por anuncio ÷ ventas del Sheets · sigue el período seleccionado arriba</div>
+          <div class="dropi-sub">Gasto Meta por anuncio ÷ ventas del Sheets · pulsa ↺ Analizar (manual, para cuidar la cuota de Meta)</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px">
           <span class="dropi-badge" id="adsopt-period">—</span>
@@ -2481,11 +2481,11 @@ function loadAdsLS(key){
   return null;
 }
 
-async function fetchAdsRange(since, until, cacheObj, force){
+async function fetchAdsRange(since, until, cacheObj, force, ttl){
   const tk = localStorage.getItem(LMT);
   if(!tk) return null;
   const key = since+'_'+until;
-  if(!force && cacheObj.ads && cacheObj.key===key && Date.now()-cacheObj.ts<300000) return cacheObj.ads;
+  if(!force && cacheObj.ads && cacheObj.key===key && Date.now()-cacheObj.ts<(ttl||900000)) return cacheObj.ads;
   const out = []; const errs = [];
   for(const acc of META_ACCOUNTS){
     try{
@@ -2563,22 +2563,34 @@ async function renderAdsOpt(force){
   const hoy = ymd(nHoy);
   const pKey = curFrom+'_'+curTo;
 
-  // Si Meta bloqueó hace poco, no insistas solo (cada reintento empeora la tasa de error)
-  if(!force && Date.now() < adsBlockedUntil){
+  // ── MODO AUTOMÁTICO: nunca consulta a Meta (el nivel anuncio es lo más caro
+  //    de la cuota). Solo pinta lo último guardado. Consulta solo si pulsas ↺.
+  if(!force){
+    const memOk = metaAdsCache.ads && metaAdsCache.key===pKey;
+    if(memOk){ paintAdsOpt(metaAdsCache.ads, (metaAdsMonthCache.ads||metaAdsCache.ads), false, 0, []); return; }
     const c = loadAdsLS(pKey);
-    if(c){ paintAdsOpt(c.ads, c.ads, true, c.ts, ['Meta limitó las consultas · reintenta con ↺ Analizar']); return; }
-    el.innerHTML = '<div class="dropi-hist-empty">⏳ Meta limitó temporalmente las consultas. Espera unos minutos y pulsa ↺ Analizar.</div>';
+    if(c){ paintAdsOpt(c.ads, c.ads, true, c.ts, ['Pulsa ↺ Analizar para traer datos frescos de Meta']); return; }
+    el.innerHTML = '<div class="dropi-hist-empty">Pulsa <b>↺ Analizar</b> para consultar el CPA por anuncio de este período.<br><span style="font-size:.7rem;opacity:.7">Es manual para no agotar la cuota de la API de Meta.</span></div>';
+    return;
+  }
+
+  // Bloqueo reciente: no insistas (cada reintento empeora la tasa de error)
+  if(Date.now() < adsBlockedUntil){
+    const mins = Math.ceil((adsBlockedUntil-Date.now())/60000);
+    const c = loadAdsLS(pKey);
+    if(c){ paintAdsOpt(c.ads, c.ads, true, c.ts, ['Meta limitó las consultas · reintenta en ~'+mins+' min']); return; }
+    el.innerHTML = '<div class="dropi-hist-empty">⏳ Meta limitó las consultas. Reintenta en ~'+mins+' min.</div>';
     return;
   }
 
   el.innerHTML = '<div class="dropi-hist-empty">Analizando anuncios del período…</div>';
   let adsP, adsM, stale=false, staleTs=0, warns=[];
   try{
-    adsP = await fetchAdsRange(curFrom, curTo, metaAdsCache, force);
-    adsM = (curFrom===mStart && curTo===hoy) ? adsP : await fetchAdsRange(mStart, hoy, metaAdsMonthCache, force);
+    adsP = await fetchAdsRange(curFrom, curTo, metaAdsCache, force, 900000);
+    adsM = (curFrom===mStart && curTo===hoy) ? adsP : await fetchAdsRange(mStart, hoy, metaAdsMonthCache, false, 3600000);
   }catch(e){
     const blocked = /blocked|limit|too many|reduce the amount/i.test(e.message||'');
-    if(blocked) adsBlockedUntil = Date.now() + 900000;
+    if(blocked) adsBlockedUntil = Date.now() + 1800000; // 30 min sin reintentar
     const c = loadAdsLS(pKey) || loadAdsLS(null);
     if(c){
       adsP = c.ads; adsM = c.ads; stale = true; staleTs = c.ts;
