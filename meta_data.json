@@ -1,6 +1,6 @@
 {
- "updated_at": "2026-08-10T06:05:11.481Z",
- "updated_at_co": "10/8/2026, 1:05:11 a. m.",
+ "updated_at": "2026-08-10T08:01:15.724Z",
+ "updated_at_co": "10/8/2026, 3:01:15 a. m.",
  "since": "2026-07-11",
  "until": "2026-08-10",
  "accounts": [
@@ -21,57 +21,57 @@
  ],
  "today": {
   "date": "2026-08-10",
-  "spend": 6499,
-  "leads": 7,
+  "spend": 12960,
+  "leads": 10,
   "campaigns": [
    {
     "account": "act_2235837880587647",
     "campaign_id": "52650940176910",
     "campaign_name": "🔴08-07|NEXORA|BURURAN|CBO|ADS 3",
-    "spend": 2058,
-    "leads": 3
+    "spend": 4003,
+    "leads": 4
    },
    {
     "account": "act_763369709939342",
     "campaign_id": "120248594070560194",
     "campaign_name": "🟡15-07|NEXORA|BURURAN|CBO| ADS 1",
-    "spend": 1484,
+    "spend": 2399,
     "leads": 2
    },
    {
     "account": "act_2235837880587647",
     "campaign_id": "52658547871310",
     "campaign_name": "🔴28-07|NEXORA|BURURAN|POSD ID",
-    "spend": 1050,
+    "spend": 2196,
     "leads": 1
    },
    {
     "account": "act_2235837880587647",
     "campaign_id": "52632751972310",
     "campaign_name": "🔵19-06|NEXORA|CBO|BURURAN",
-    "spend": 722,
+    "spend": 1807,
     "leads": 1
    },
    {
     "account": "act_2235837880587647",
     "campaign_id": "52643639324310",
     "campaign_name": "🟡27-06|NEXORA|BURURAN|GANADOR|CBO",
-    "spend": 609,
-    "leads": 0
+    "spend": 1374,
+    "leads": 1
    },
    {
     "account": "act_763369709939342",
     "campaign_id": "120248927340750194",
     "campaign_name": "🔵28-07|NEXORA|BURURAN|CBO",
-    "spend": 290,
+    "spend": 599,
     "leads": 0
    },
    {
     "account": "act_763369709939342",
     "campaign_id": "120247838992590194",
     "campaign_name": "🟡27-06|NEXORA|BURURAN|GANADORES|ABO|POSD ID",
-    "spend": 286,
-    "leads": 0
+    "spend": 582,
+    "leads": 1
    }
   ]
  },
@@ -223,13 +223,13 @@
   },
   {
    "date": "2026-08-09",
-   "spend": 428133,
+   "spend": 428977,
    "leads": 259
   },
   {
    "date": "2026-08-10",
-   "spend": 6499,
-   "leads": 7
+   "spend": 12960,
+   "leads": 10
   }
  ],
  "budgets": [
@@ -1351,56 +1351,56 @@
    "d": "2026-08-09",
    "a": "act_2235837880587647",
    "c": "🔵19-06|NEXORA|CBO|BURURAN",
-   "s": 93838,
+   "s": 94121,
    "l": 58
   },
   {
    "d": "2026-08-09",
    "a": "act_2235837880587647",
    "c": "🟡27-06|NEXORA|BURURAN|GANADOR|CBO",
-   "s": 32901,
+   "s": 32912,
    "l": 24
   },
   {
    "d": "2026-08-09",
    "a": "act_2235837880587647",
    "c": "🔴08-07|NEXORA|BURURAN|CBO|ADS 3",
-   "s": 105210,
+   "s": 105503,
    "l": 63
   },
   {
    "d": "2026-08-09",
    "a": "act_2235837880587647",
    "c": "🔴28-07|NEXORA|BURURAN|POSD ID",
-   "s": 67507,
+   "s": 67597,
    "l": 38
   },
   {
    "d": "2026-08-10",
    "a": "act_2235837880587647",
    "c": "🔵19-06|NEXORA|CBO|BURURAN",
-   "s": 722,
+   "s": 1807,
    "l": 1
   },
   {
    "d": "2026-08-10",
    "a": "act_2235837880587647",
    "c": "🟡27-06|NEXORA|BURURAN|GANADOR|CBO",
-   "s": 609,
-   "l": 0
+   "s": 1374,
+   "l": 1
   },
   {
    "d": "2026-08-10",
    "a": "act_2235837880587647",
    "c": "🔴08-07|NEXORA|BURURAN|CBO|ADS 3",
-   "s": 2058,
-   "l": 3
+   "s": 4003,
+   "l": 4
   },
   {
    "d": "2026-08-10",
    "a": "act_2235837880587647",
    "c": "🔴28-07|NEXORA|BURURAN|POSD ID",
-   "s": 1050,
+   "s": 2196,
    "l": 1
   },
   {
@@ -2807,7 +2807,7 @@
    "d": "2026-08-09",
    "a": "act_763369709939342",
    "c": "🟡27-06|NEXORA|BURURAN|GANADORES|ABO|POSD ID",
-   "s": 20438,
+   "s": 20460,
    "l": 11
   },
   {
@@ -2821,35 +2821,35 @@
    "d": "2026-08-09",
    "a": "act_763369709939342",
    "c": "🟡15-07|NEXORA|BURURAN|CBO| ADS 1",
-   "s": 67727,
+   "s": 67848,
    "l": 57
   },
   {
    "d": "2026-08-09",
    "a": "act_763369709939342",
    "c": "🔵28-07|NEXORA|BURURAN|CBO",
-   "s": 40512,
+   "s": 40536,
    "l": 8
   },
   {
    "d": "2026-08-10",
    "a": "act_763369709939342",
    "c": "🟡27-06|NEXORA|BURURAN|GANADORES|ABO|POSD ID",
-   "s": 286,
-   "l": 0
+   "s": 582,
+   "l": 1
   },
   {
    "d": "2026-08-10",
    "a": "act_763369709939342",
    "c": "🟡15-07|NEXORA|BURURAN|CBO| ADS 1",
-   "s": 1484,
+   "s": 2399,
    "l": 2
   },
   {
    "d": "2026-08-10",
    "a": "act_763369709939342",
    "c": "🔵28-07|NEXORA|BURURAN|CBO",
-   "s": 290,
+   "s": 599,
    "l": 0
   }
  ]
