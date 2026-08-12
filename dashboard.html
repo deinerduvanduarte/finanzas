@@ -2299,21 +2299,28 @@ function resetDropi(){
 // ╠══════════════════════════════════════════════════════════════════╣
 // ║ Para AGREGAR una cuenta: copia una línea y cambia los datos.       ║
 // ║ Para QUITARLA: borra o comenta la línea con //                    ║
-// ║                                                                   ║
 // ║   id     → el act_XXXXX de la cuenta (obligatorio)                ║
 // ║   nombre → como quieres verlo en el dashboard                     ║
 // ║   bm     → nombre corto del Business Manager / portafolio         ║
-// ║                                                                   ║
-// ║ ⚠️  ADEMÁS de editar aquí, haz 2 cosas más:                       ║
-// ║   1) Asignar la cuenta al usuario del sistema "dashboard-sync"    ║
-// ║      con permiso "Ver rendimiento"                                ║
-// ║   2) Agregar el mismo act_XXXXX en scripts/meta_sync.js           ║
+// ║ ⚠️  ADEMÁS: asigna la cuenta al usuario "dashboard-sync" con       ║
+// ║     permiso "Ver rendimiento", y agrégala en scripts/meta_sync.js ║
 // ╚══════════════════════════════════════════════════════════════════╝
 const META_CUENTAS = [
   { id:'act_2235837880587647', nombre:'NEXORA 1', bm:'HT' },
   { id:'act_763369709939342',  nombre:'NEXORA 2', bm:'HT' },
   // { id:'act_XXXXXXXXXXXX',  nombre:'MI CUENTA 3', bm:'OTRO BM' },
 ];
+
+// ── Equivalencias de nombres (opcional) ──
+// Si un producto de Meta NO cruza con el nombre de tu Sheets, fuérzalo aquí:
+//   'NOMBRE EN META' : 'NOMBRE EN TU SHEETS'
+const META_ALIAS = {
+  // 'CYPERUS OIL': 'ACEITE CYPERUS ROTUNDUS',
+};
+// Palabras genéricas que se ignoran al comparar nombres de producto
+const META_STOPWORDS = ['ACEITE','OIL','PACK','KIT','COMBO','UNIDADES','UNIDAD','GEL','CREMA',
+  'CAPSULAS','CAPSULA','POLVO','FRASCO','TARRO','SUPLEMENTO','NATURAL','ORIGINAL','PREMIUM',
+  'OLD','SCHOOL','PARA','CON','DEL','LOS','LAS'];
 // ── Fin de la configuración · no toques nada más abajo ──
 
 const META_ACCOUNTS   = META_CUENTAS.map(c=>c.id);
@@ -2323,10 +2330,8 @@ const LMT = 'vd_meta_token';
 let metaData = null, metaBudgetsTs = 0, metaAccTs = 0;
 
 async function loadMetaData(showT){
-  const urls = [
-    'meta_data.json?v=' + Date.now(),
-    'https://raw.githubusercontent.com/deinerduvanduarte/finanzas/main/meta_data.json?v=' + Date.now()
-  ];
+  const urls = ['meta_data.json?v=' + Date.now(),
+    'https://raw.githubusercontent.com/deinerduvanduarte/finanzas/main/meta_data.json?v=' + Date.now()];
   for(const u of urls){
     try{
       const r = await fetch(u, {cache:'no-store'});
@@ -2349,8 +2354,7 @@ async function loadMetaData(showT){
 const META_JARGON = /^(NEXORA|CBO|ABO|ADS\b.*|POSD.*|VIDEO|VID\b.*|IMG.*|IMAGEN|TRAFICO|TEST.*|ESCALA.*|GANADOR(ES)?\b.*|.*\bGANADOR(ES)?)$/;
 function metaProductFromCampaign(name){
   const parts = String(name||'').split('|')
-    .map(s=>s.trim().toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g,''))
-    .filter(Boolean);
+    .map(s=>s.trim().toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g,'')).filter(Boolean);
   for(let i=1;i<parts.length;i++){
     const p = parts[i];
     if(META_JARGON.test(p)) continue;
@@ -2360,6 +2364,22 @@ function metaProductFromCampaign(name){
   return 'OTROS';
 }
 const fMeta = n => '$' + Math.round(n).toLocaleString('es-CO');
+
+// ── Cruce de nombres Sheets ⇄ Meta ──
+const mNorm = s2 => String(s2||'').toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+function mTokens(s2){
+  return mNorm(s2).replace(/[^A-Z0-9 ]/g,' ').split(/\s+/)
+    .filter(w=>w.length>=4 && !META_STOPWORDS.includes(w) && !/^\d+$/.test(w));
+}
+function prodMatch(sheetsProd, metaProd){
+  const a = mNorm(sheetsProd), b = mNorm(metaProd);
+  if(!a || !b) return false;
+  const al = META_ALIAS[b];
+  if(al && (a.includes(mNorm(al)) || mNorm(al).includes(a))) return true;
+  if(a.includes(b) || (a.length>=4 && b.includes(a))) return true;
+  const ta = mTokens(sheetsProd), tb = mTokens(metaProd);
+  return ta.some(w=>tb.includes(w));
+}
 
 function configMetaToken(){
   const cur = localStorage.getItem(LMT)||'';
@@ -2385,17 +2405,13 @@ async function fetchMetaLive(showT){
   try{
     const all = [];
     for(const acc of META_ACCOUNTS){
-      const p = new URLSearchParams({
-        fields:'campaign_id,campaign_name,spend,actions', level:'campaign',
-        time_range: JSON.stringify({since:today, until:today}), limit:'500', access_token: tk
-      });
+      const p = new URLSearchParams({fields:'campaign_id,campaign_name,spend,actions', level:'campaign',
+        time_range: JSON.stringify({since:today, until:today}), limit:'500', access_token: tk});
       const j = await (await fetch('https://graph.facebook.com/v21.0/'+acc+'/insights?'+p)).json();
       if(j.error) throw new Error(j.error.message);
       (j.data||[]).forEach(x=>all.push({d:today, a:acc, c:x.campaign_name||'',
         s:parseFloat(x.spend)||0, l:metaLeadsFromActions(x.actions)}));
     }
-
-    // Presupuestos (CBO + ABO) — cada 10 min para cuidar el límite de la API
     let budgets = null;
     if(Date.now()-metaBudgetsTs > 600000 || !(metaData && Array.isArray(metaData.budgets))){
       budgets = [];
@@ -2422,11 +2438,9 @@ async function fetchMetaLive(showT){
       }
       metaBudgetsTs = Date.now();
     }
-
     if(!metaData) metaData = {rows:[], daily:[], accounts:[], today:{}};
     if(budgets) metaData.budgets = budgets;
 
-    // Nombres de cuenta y BM — reintenta cada 30 min hasta tenerlos completos
     const accsOk = (metaData.accounts||[]).length===META_ACCOUNTS.length
                    && metaData.accounts.every(a=>a.name && !/^act_/.test(a.name) && a.biz);
     if(!accsOk && Date.now()-metaAccTs > 1800000){
@@ -2462,7 +2476,7 @@ async function fetchMetaLive(showT){
 async function refreshMeta(showT){
   await loadMetaData(false);
   const live = await fetchMetaLive(false);
-  if(showT) toast(live ? '⚡ Actualizado EN VIVO desde Meta API' : '📡 Actualizado (sync GitHub · usa 🔑 Token para el modo en vivo)');
+  if(showT) toast(live ? '⚡ Actualizado EN VIVO desde Meta API' : '📡 Actualizado (sync GitHub · usa 🔑 Token)');
 }
 
 // ── OPTIMIZACIÓN DE ANUNCIOS ──
@@ -2489,10 +2503,8 @@ async function fetchAdsRange(since, until, cacheObj, force, ttl){
   const out = []; const errs = [];
   for(const acc of META_ACCOUNTS){
     try{
-      const p = new URLSearchParams({
-        fields:'ad_id,ad_name,campaign_name,spend,actions', level:'ad',
-        time_range: JSON.stringify({since, until}), limit:'1000', access_token: tk
-      });
+      const p = new URLSearchParams({fields:'ad_id,ad_name,campaign_name,spend,actions', level:'ad',
+        time_range: JSON.stringify({since, until}), limit:'1000', access_token: tk});
       const j = await (await fetch('https://graph.facebook.com/v21.0/'+acc+'/insights?'+p)).json();
       if(j.error) throw new Error(j.error.message);
       (j.data||[]).forEach(x=>out.push({acc, id:String(x.ad_id||''), name:x.ad_name||'',
@@ -2500,7 +2512,6 @@ async function fetchAdsRange(since, until, cacheObj, force, ttl){
     }catch(e){ errs.push(accLabel(acc)+': '+e.message); }
   }
   if(!out.length && errs.length) throw new Error(errs.join(' · '));
-  // Estado de los anuncios + activos sin gasto en el período
   try{
     for(const acc of META_ACCOUNTS){
       const ps = new URLSearchParams({fields:'id,name,effective_status,campaign{name}',limit:'1000',access_token:tk});
@@ -2511,8 +2522,7 @@ async function fetchAdsRange(since, until, cacheObj, force, ttl){
         const o = idx[a.id];
         if(o){ o.st = a.effective_status; }
         else if(a.effective_status==='ACTIVE'){
-          out.push({acc, id:String(a.id), name:a.name||'', camp:(a.campaign&&a.campaign.name)||'',
-            spend:0, leads:0, st:'ACTIVE'});
+          out.push({acc, id:String(a.id), name:a.name||'', camp:(a.campaign&&a.campaign.name)||'', spend:0, leads:0, st:'ACTIVE'});
         }
       });
     }
@@ -2563,18 +2573,17 @@ async function renderAdsOpt(force){
   const hoy = ymd(nHoy);
   const pKey = curFrom+'_'+curTo;
 
-  // ── MODO AUTOMÁTICO: nunca consulta a Meta (el nivel anuncio es lo más caro
-  //    de la cuota). Solo pinta lo último guardado. Consulta solo si pulsas ↺.
+  // MODO AUTOMÁTICO: no consulta a Meta (nivel anuncio = lo más caro de la cuota)
   if(!force){
-    const memOk = metaAdsCache.ads && metaAdsCache.key===pKey;
-    if(memOk){ paintAdsOpt(metaAdsCache.ads, (metaAdsMonthCache.ads||metaAdsCache.ads), false, 0, []); return; }
+    if(metaAdsCache.ads && metaAdsCache.key===pKey){
+      paintAdsOpt(metaAdsCache.ads, (metaAdsMonthCache.ads||metaAdsCache.ads), false, 0, []); return;
+    }
     const c = loadAdsLS(pKey);
     if(c){ paintAdsOpt(c.ads, c.ads, true, c.ts, ['Pulsa ↺ Analizar para traer datos frescos de Meta']); return; }
     el.innerHTML = '<div class="dropi-hist-empty">Pulsa <b>↺ Analizar</b> para consultar el CPA por anuncio de este período.<br><span style="font-size:.7rem;opacity:.7">Es manual para no agotar la cuota de la API de Meta.</span></div>';
     return;
   }
 
-  // Bloqueo reciente: no insistas (cada reintento empeora la tasa de error)
   if(Date.now() < adsBlockedUntil){
     const mins = Math.ceil((adsBlockedUntil-Date.now())/60000);
     const c = loadAdsLS(pKey);
@@ -2590,7 +2599,7 @@ async function renderAdsOpt(force){
     adsM = (curFrom===mStart && curTo===hoy) ? adsP : await fetchAdsRange(mStart, hoy, metaAdsMonthCache, false, 3600000);
   }catch(e){
     const blocked = /blocked|limit|too many|reduce the amount/i.test(e.message||'');
-    if(blocked) adsBlockedUntil = Date.now() + 1800000; // 30 min sin reintentar
+    if(blocked) adsBlockedUntil = Date.now() + 1800000;
     const c = loadAdsLS(pKey) || loadAdsLS(null);
     if(c){
       adsP = c.ads; adsM = c.ads; stale = true; staleTs = c.ts;
@@ -2598,7 +2607,7 @@ async function renderAdsOpt(force){
                          : 'Error Meta: '+e.message+' — mostrando datos guardados');
     }else{
       el.innerHTML = '<div class="dropi-hist-empty">'+(blocked
-        ? '⏳ Meta limitó temporalmente las consultas (rate limit de la API). No es tu dashboard ni GitHub — espera unos minutos y pulsa ↺ Analizar.'
+        ? '⏳ Meta limitó temporalmente las consultas (rate limit). No es tu dashboard ni GitHub — espera unos minutos y pulsa ↺ Analizar.'
         : 'Error Meta: '+e.message)+'</div>';
       return;
     }
@@ -2614,7 +2623,6 @@ function paintAdsOpt(adsP, adsM, stale, staleTs, warns){
   const nHoy = new Date();
   const mStart = ymd(new Date(nHoy.getFullYear(), nHoy.getMonth(), 1));
   const hoy = ymd(nHoy);
-
   const salesP = salesByAd(curFrom, curTo);
   const salesM = salesByAd(mStart, hoy);
   const monthById = {};
@@ -2626,8 +2634,7 @@ function paintAdsOpt(adsP, adsM, stale, staleTs, warns){
     if(a.spend>0 || v>0 || a.st==='ACTIVE'){
       const m = monthById[a.id] || {spend:0, ventas:matchSales(a, salesM)};
       rows.push({...a, ventas:v, cpa: v>0 ? a.spend/v : 0,
-        vM:m.ventas, cpaM: m.ventas>0 ? m.spend/m.ventas : 0,
-        prod: metaProductFromCampaign(a.camp)});
+        vM:m.ventas, cpaM: m.ventas>0 ? m.spend/m.ventas : 0, prod: metaProductFromCampaign(a.camp)});
     }
   });
   Object.entries(salesP).forEach(([k,v])=>{
@@ -2638,11 +2645,10 @@ function paintAdsOpt(adsP, adsM, stale, staleTs, warns){
   const accIds = [...new Set(rows.map(r=>r.acc||'otros'))];
   if(!adsOptTab || !accIds.includes(adsOptTab)) adsOptTab = accIds[0]||'';
   const tabRows = rows.filter(r=>(r.acc||'otros')===adsOptTab);
-
   const byProd = {};
   tabRows.forEach(r=>{ (byProd[r.prod] = byProd[r.prod]||[]).push(r); });
   const prodOrder = Object.entries(byProd)
-    .map(([p,list])=>({p, list, spend:list.reduce((s,x)=>s+x.spend,0), ventas:list.reduce((s,x)=>s+x.ventas,0)}))
+    .map(([p,list])=>({p, list, spend:list.reduce((x,y)=>x+y.spend,0), ventas:list.reduce((x,y)=>x+y.ventas,0)}))
     .sort((a,b)=>b.spend-a.spend);
 
   const cpaColor = c => c<=13000 ? '#34d399' : c<=17000 ? '#fb923c' : '#f87171';
@@ -2670,8 +2676,7 @@ function paintAdsOpt(adsP, adsM, stale, staleTs, warns){
     '<button onclick="adsOptTab=\''+id+'\';paintAdsOptRefresh()" style="background:'+(id===adsOptTab?'rgba(99,102,241,.25)':'rgba(255,255,255,.06)')
     +';border:1.5px solid '+(id===adsOptTab?'#818cf8':'rgba(255,255,255,.12)')
     +';color:'+(id===adsOptTab?'#c7d2fe':'rgba(255,255,255,.5)')
-    +';padding:6px 16px;border-radius:8px;font-size:.78rem;font-weight:800;cursor:pointer;font-family:var(--font)">'+accLabel(id==='otros'?'':id)+'</button>'
-  ).join('');
+    +';padding:6px 16px;border-radius:8px;font-size:.78rem;font-weight:800;cursor:pointer;font-family:var(--font)">'+accLabel(id==='otros'?'':id)+'</button>').join('');
 
   const warnList = (warns||[]).slice();
   if(stale && staleTs) warnList.push('Datos guardados del '+new Date(staleTs).toLocaleString('es-CO',{timeZone:'America/Bogota'}));
@@ -2686,7 +2691,7 @@ function paintAdsOpt(adsP, adsM, stale, staleTs, warns){
         const conV = g.list.filter(x=>x.ventas>0).sort((a,b)=>b.spend-a.spend);
         const sinV = g.list.filter(x=>x.ventas===0 && x.spend>0).sort((a,b)=>b.spend-a.spend);
         const sinG = g.list.filter(x=>x.ventas===0 && x.spend===0);
-        const gastoSin = sinV.reduce((s,x)=>s+x.spend,0);
+        const gastoSin = sinV.reduce((x,y)=>x+y.spend,0);
         return '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;overflow:hidden;margin-bottom:12px">'
           +'<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(255,255,255,.04);flex-wrap:wrap;gap:6px">'
           +'<span style="font-size:.84rem;font-weight:800;color:#f8fafc">📦 '+g.p+'</span>'
@@ -2697,7 +2702,6 @@ function paintAdsOpt(adsP, adsM, stale, staleTs, warns){
           +'<div style="max-height:300px;overflow-y:auto">'+conV.map(row).join('')+sinV.map(row).join('')+sinG.map(row).join('')+'</div></div>';
       }).join('') : '<div class="dropi-hist-empty">Sin anuncios en esta cuenta para el período</div>');
 }
-
 function paintAdsOptRefresh(){
   const L = window._adsOptLast;
   if(L) paintAdsOpt(L.adsP, L.adsM, L.stale, L.staleTs, L.warns);
@@ -2707,7 +2711,6 @@ function renderMeta(){
   const el = document.getElementById('meta-body');
   if(!el) return;
   if(!metaData){ el.innerHTML = '<div class="dropi-hist-empty">Cargando datos de Meta Ads…</div>'; return; }
-
   const rows  = metaData.rows.filter(r => r.d >= curFrom && r.d <= curTo);
   const inv   = rows.reduce((s,r)=>s+r.s,0);
   const leads = rows.reduce((s,r)=>s+r.l,0);
@@ -2727,7 +2730,6 @@ function renderMeta(){
   const stMap = {};
   (metaData.budgets||[]).forEach(b=>{ stMap[String(b.c||'').trim()] = b.act>0; });
   const campOn = nm => stMap[String(nm||'').trim()] === true;
-
   const camps = (t.campaigns||[]).slice().sort((a,b)=>b.spend-a.spend);
   const campsShow = camps.filter(c=>c.spend>0 || campOn(c.campaign_name));
   const maxCampS = campsShow.length ? Math.max(campsShow[0].spend,1) : 1;
@@ -2742,8 +2744,7 @@ function renderMeta(){
     +accRows.map(([id,v],i)=>'<div class="dc-row">'
       +'<span class="dc-label" style="color:'+accPal[i%accPal.length]+';font-weight:800">'+accLabel(id)+'</span>'
       +'<div class="dc-bar-track"><div class="dc-bar-fill" style="width:'+Math.round(v.s/maxAcc*100)+'%;background:'+accPal[i%accPal.length]+'"></div></div>'
-      +'<span class="dc-pct" style="color:#f8fafc;width:auto;min-width:180px">'+fMeta(v.s)+' · '+v.l+' leads'+(v.l>0?' · CPL '+fMeta(v.s/v.l):'')+'</span></div>').join('')
-    +'</div>' : '';
+      +'<span class="dc-pct" style="color:#f8fafc;width:auto;min-width:180px">'+fMeta(v.s)+' · '+v.l+' leads'+(v.l>0?' · CPL '+fMeta(v.s/v.l):'')+'</span></div>').join('')+'</div>' : '';
 
   let budgetHtml = '';
   if(Array.isArray(metaData.budgets) && metaData.budgets.length){
@@ -2759,13 +2760,13 @@ function renderMeta(){
       if(!bp[p]) bp[p] = {b:0, act:0};
       bp[p].b += b.b; bp[p].act += b.act;
     });
-    const totB = Object.values(bp).reduce((s,x)=>s+x.b,0);
-    const totS = Object.keys(bp).reduce((s,p)=>s+(spentByProd[p]||0),0);
+    const totB = Object.values(bp).reduce((x,y)=>x+y.b,0);
+    const totS = Object.keys(bp).reduce((x,p)=>x+(spentByProd[p]||0),0);
     const rowsB = Object.entries(bp).sort((a,b)=>b[1].b-a[1].b);
     if(rowsB.length) budgetHtml = '<div class="dropi-compare" style="margin-top:0;margin-bottom:12px">'
       +'<div class="dc-title">💰 Presupuesto del día por producto · solo campañas activas</div>'
       +rowsB.map(([p,x])=>{
-        const sp  = spentByProd[p]||0;
+        const sp = spentByProd[p]||0;
         const pct = x.b>0 ? Math.min(100, Math.round(sp/x.b*100)) : 0;
         const shareB = totB>0 ? Math.round(x.b/totB*100) : 0;
         return '<div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:10px;padding:12px 14px;margin-bottom:8px">'
@@ -2796,8 +2797,7 @@ function renderMeta(){
         +'<div class="dc-title">📦 Gasto por producto · período seleccionado</div>'
         +ps.map(([p,v])=>'<div class="dc-row"><span class="dc-label" title="'+p+'">'+p+'</span>'
           +'<div class="dc-bar-track"><div class="dc-bar-fill" style="width:'+Math.round(v.inv/maxInv*100)+'%;background:#818cf8"></div></div>'
-          +'<span class="dc-pct" style="color:#c7d2fe;width:auto;min-width:150px">'+fMeta(v.inv)+' · '+v.leads+' leads'+(v.leads>0?' · CPL '+fMeta(v.inv/v.leads):'')+'</span></div>').join('')
-        +'</div>' : '')
+          +'<span class="dc-pct" style="color:#c7d2fe;width:auto;min-width:150px">'+fMeta(v.inv)+' · '+v.leads+' leads'+(v.leads>0?' · CPL '+fMeta(v.inv/v.leads):'')+'</span></div>').join('')+'</div>' : '')
     + (campsShow.length ? '<div class="dropi-compare" style="margin-top:0">'
         +'<div class="dc-title">📣 Campañas de hoy · '+campsShow.length+' con actividad · desliza para ver todas</div>'
         +'<div style="max-height:300px;overflow-y:auto;padding-right:4px">'
@@ -2808,7 +2808,6 @@ function renderMeta(){
           +'<div style="height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden"><div style="height:100%;width:'+Math.round(c.spend/maxCampS*100)+'%;background:#34d399;border-radius:2px"></div></div>'
           +'<span style="font-size:.7rem;font-weight:800;color:#6ee7b7;text-align:right;white-space:nowrap">'+fMeta(c.spend)+' · '+c.leads+' leads</span></div>').join('')
         +'</div></div>' : '');
-
   const upd = document.getElementById('meta-upd');
   if(upd) upd.textContent = '🕐 ' + (metaData.updated_at_co || '—');
 }
@@ -2824,17 +2823,15 @@ function applyMetaAutofill(date, combos){
     if(!metaProd[p]) metaProd[p] = {inv:0, leads:0};
     metaProd[p].inv += r.s; metaProd[p].leads += r.l;
   });
-  const norm = s2 => String(s2||'').toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
   const matches = {};
   Object.entries(combos).forEach(([key,c])=>{
-    const np = norm(c.prod);
     Object.keys(metaProd).forEach(mp=>{
-      if(np.includes(mp) || (np.length>=4 && mp.includes(np))) (matches[mp] = matches[mp]||[]).push(key);
+      if(prodMatch(c.prod, mp)) (matches[mp] = matches[mp]||[]).push(key);
     });
   });
   let changed = false;
   Object.entries(matches).forEach(([mp, keys])=>{
-    const totV = keys.reduce((s2,k)=>s2+combos[k].ventas,0);
+    const totV = keys.reduce((x,k)=>x+combos[k].ventas,0);
     keys.forEach(k=>{
       const share = totV>0 ? combos[k].ventas/totV : 1/keys.length;
       pautaData[k] = { inv:String(Math.round(metaProd[mp].inv*share)),
@@ -3205,8 +3202,8 @@ function renderPautaSummary(){
   if(typeof metaData!=='undefined' && metaData && Array.isArray(metaData.rows)){
     const mRows = metaData.rows.filter(r=>r.d===activeDate);
     if(mRows.length){
-      totalInv   = mRows.reduce((s2,r)=>s2+r.s,0);
-      totalLeads = mRows.reduce((s2,r)=>s2+r.l,0);
+      totalInv   = mRows.reduce((x,r)=>x+r.s,0);
+      totalLeads = mRows.reduce((x,r)=>x+r.l,0);
     }
   }
 
