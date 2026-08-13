@@ -2693,23 +2693,42 @@ function paintAdsOpt(adsP, adsM, stale, staleTs, warns){
   const mList = Object.entries(mesAll).filter(([,v])=>v.s>0||v.v>0).sort((a,b)=>b[1].s-a[1].s);
   const mTotS = mList.reduce((x,[,v])=>x+v.s,0);
   const mTotV = mList.reduce((x,[,v])=>x+v.v,0);
+  // Ventas TOTALES del mes según el Sheets (incluye las que no tienen ID de anuncio)
+  const mSheetRows = allRows.filter(r=>r._d && r._d>=mStart && r._d<=hoy);
+  const mSheetV = mSheetRows.length;
+  const mSinId  = mSheetRows.filter(r=>!(r.anuncio||'').trim()).length;
+
   let mesHtml = '';
-  if(mTotS || mTotV){
+  if(mTotS || mTotV || mSheetV){
     const mx = mList.length ? Math.max(mList[0][1].s,1) : 1;
-    const cpaT = mTotV>0 ? mTotS/mTotV : 0;
+    const cpaT = mTotV>0 ? mTotS/mTotV : 0;                    // CPA atribuido (solo con ID)
+    const cpaR = mSheetV>0 ? mTotS/mSheetV : 0;                // CPA real (todas las ventas)
     const cCol = cpaT===0?'rgba(255,255,255,.5)':cpaT<=13000?'#34d399':cpaT<=17000?'#fb923c':'#f87171';
+    const rCol = cpaR===0?'rgba(255,255,255,.5)':cpaR<=13000?'#34d399':cpaR<=17000?'#fb923c':'#f87171';
+    const pctAtr = mSheetV>0 ? Math.round(mTotV/mSheetV*100) : 0;
     mesHtml = '<div style="background:linear-gradient(135deg,#1e1b4b,#0f172a);border:1px solid rgba(251,191,36,.28);border-radius:12px;padding:18px 20px;margin-top:4px">'
       +'<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:rgba(251,191,36,.8);margin-bottom:14px">📅 Gasto total del mes · '+fmtDisp(mStart)+' – '+fmtDisp(hoy)+'</div>'
-      +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">'
+      +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">'
       +'<div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:10px;padding:12px 14px">'
       +'<div style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:rgba(255,255,255,.4);margin-bottom:6px">💸 Gasto del mes</div>'
-      +'<div style="font-size:1.5rem;font-weight:800;color:#fbbf24;line-height:1">'+fMeta(mTotS)+'</div></div>'
+      +'<div style="font-size:1.45rem;font-weight:800;color:#fbbf24;line-height:1">'+fMeta(mTotS)+'</div>'
+      +'<div style="font-size:.64rem;color:rgba(255,255,255,.35);margin-top:5px">inversión Meta</div></div>'
       +'<div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:10px;padding:12px 14px">'
       +'<div style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:rgba(255,255,255,.4);margin-bottom:6px">🛒 Ventas del mes</div>'
-      +'<div style="font-size:1.5rem;font-weight:800;color:#34d399;line-height:1">'+mTotV+'</div></div>'
+      +'<div style="font-size:1.45rem;font-weight:800;color:#34d399;line-height:1">'+mSheetV+'</div>'
+      +'<div style="font-size:.64rem;color:rgba(255,255,255,.35);margin-top:5px">todas las del Sheets</div></div>'
+      +'<div style="background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);border-radius:10px;padding:12px 14px">'
+      +'<div style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:rgba(251,191,36,.7);margin-bottom:6px">🎯 CPA real del mes</div>'
+      +'<div style="font-size:1.45rem;font-weight:800;color:'+rCol+';line-height:1">'+(cpaR>0?fMeta(cpaR):'—')+'</div>'
+      +'<div style="font-size:.64rem;color:rgba(255,255,255,.4);margin-top:5px">gasto ÷ TODAS las ventas</div></div>'
       +'<div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:10px;padding:12px 14px">'
-      +'<div style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:rgba(255,255,255,.4);margin-bottom:6px">🎯 CPA del mes</div>'
-      +'<div style="font-size:1.5rem;font-weight:800;color:'+cCol+';line-height:1">'+(cpaT>0?fMeta(cpaT):'—')+'</div></div></div>'
+      +'<div style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:rgba(255,255,255,.4);margin-bottom:6px">🔗 Atribuidas a anuncio</div>'
+      +'<div style="font-size:1.45rem;font-weight:800;color:'+cCol+';line-height:1">'+mTotV+' <span style="font-size:.8rem;color:rgba(255,255,255,.4)">('+pctAtr+'%)</span></div>'
+      +'<div style="font-size:.64rem;color:rgba(255,255,255,.35);margin-top:5px">CPA atribuido '+(cpaT>0?fMeta(cpaT):'—')+'</div></div></div>'
+      +((mSheetV-mTotV)>0 ? '<div style="background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.25);border-radius:8px;padding:9px 13px;margin-bottom:12px;font-size:.71rem;color:#bfdbfe">ℹ️ '
+        +(mSheetV-mTotV)+' ventas del mes no se pudieron atribuir a un anuncio'
+        +(mSinId>0?' ('+mSinId+' sin ID de anuncio en el Sheets)':'')
+        +' — por eso el <b>CPA real</b> es mejor que el atribuido.</div>' : '')
       +mList.map(([id,v])=>{
         const cp = v.v>0 ? v.s/v.v : 0;
         const col = cp===0?'rgba(255,255,255,.4)':cp<=13000?'#34d399':cp<=17000?'#fb923c':'#f87171';
