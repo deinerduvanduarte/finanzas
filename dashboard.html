@@ -578,7 +578,7 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
       <div id="ciudad-bars"></div>
     </div>
 
-    <!-- META ADS · DATOS AUTOMÁTICOS -->
+    <!-- META ADS -->
     <div class="dropi-card" id="meta-card" style="margin-bottom:14px">
       <div class="dropi-header">
         <div>
@@ -587,14 +587,14 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
         </div>
         <div style="display:flex;align-items:center;gap:8px">
           <span class="dropi-badge" id="meta-upd">Cargando…</span>
-          <button class="dropi-reset" onclick="configMetaToken()" title="Pega tu token para actualización EN VIVO cada minuto">🔑 Token</button>
+          <button class="dropi-reset" onclick="configMetaToken()" title="Token para el modo EN VIVO">🔑 Token</button>
           <button class="dropi-reset" onclick="refreshMeta(true)">↺ Actualizar</button>
         </div>
       </div>
       <div id="meta-body"><div class="dropi-hist-empty">Cargando datos de Meta Ads…</div></div>
     </div>
 
-    <!-- OPTIMIZACIÓN DE ANUNCIOS · CPA REAL -->
+    <!-- OPTIMIZACIÓN DE ANUNCIOS -->
     <div class="dropi-card" id="adsopt-card" style="margin-bottom:14px">
       <div class="dropi-header">
         <div>
@@ -1231,7 +1231,7 @@ function mostrarDash(){
   syncDP();renderAll();startAuto();
   renderDropiHistorico(null); // mostrar estado vacío hasta que se suba Excel
   updateSoundBtn(); // pintar el estado del botón 🔔 según localStorage
-  loadMetaData(false).then(()=>fetchMetaLive(false)); // Meta: histórico + en vivo si hay token
+  loadMetaData(false).then(()=>fetchMetaLive(false));
 }
 function volverSetup(){clearInterval(autoT);clearInterval(cntT);document.getElementById('main').style.display='none';document.getElementById('setup-screen').style.display='flex';}
 function showErr(m){const e=document.getElementById('setup-err');e.textContent=m;e.style.display=m?'block':'none';}
@@ -2313,15 +2313,13 @@ const META_CUENTAS = [
 
 // ── Equivalencias de nombres (opcional) ──
 // Si un producto de Meta NO cruza con el nombre de tu Sheets, fuérzalo aquí:
-//   'NOMBRE EN META' : 'NOMBRE EN TU SHEETS'
 const META_ALIAS = {
   // 'CYPERUS OIL': 'ACEITE CYPERUS ROTUNDUS',
 };
-// Palabras genéricas que se ignoran al comparar nombres de producto
 const META_STOPWORDS = ['ACEITE','OIL','PACK','KIT','COMBO','UNIDADES','UNIDAD','GEL','CREMA',
   'CAPSULAS','CAPSULA','POLVO','FRASCO','TARRO','SUPLEMENTO','NATURAL','ORIGINAL','PREMIUM',
   'OLD','SCHOOL','PARA','CON','DEL','LOS','LAS'];
-// ── Fin de la configuración · no toques nada más abajo ──
+// ── Fin de la configuración ──
 
 const META_ACCOUNTS   = META_CUENTAS.map(c=>c.id);
 const META_ACC_LABELS = Object.fromEntries(META_CUENTAS.map(c=>[c.id, c.nombre]));
@@ -2573,7 +2571,6 @@ async function renderAdsOpt(force){
   const hoy = ymd(nHoy);
   const pKey = curFrom+'_'+curTo;
 
-  // MODO AUTOMÁTICO: no consulta a Meta (nivel anuncio = lo más caro de la cuota)
   if(!force){
     if(metaAdsCache.ads && metaAdsCache.key===pKey){
       paintAdsOpt(metaAdsCache.ads, (metaAdsMonthCache.ads||metaAdsCache.ads), false, 0, []); return;
@@ -2583,7 +2580,6 @@ async function renderAdsOpt(force){
     el.innerHTML = '<div class="dropi-hist-empty">Pulsa <b>↺ Analizar</b> para consultar el CPA por anuncio de este período.<br><span style="font-size:.7rem;opacity:.7">Es manual para no agotar la cuota de la API de Meta.</span></div>';
     return;
   }
-
   if(Date.now() < adsBlockedUntil){
     const mins = Math.ceil((adsBlockedUntil-Date.now())/60000);
     const c = loadAdsLS(pKey);
@@ -2591,7 +2587,6 @@ async function renderAdsOpt(force){
     el.innerHTML = '<div class="dropi-hist-empty">⏳ Meta limitó las consultas. Reintenta en ~'+mins+' min.</div>';
     return;
   }
-
   el.innerHTML = '<div class="dropi-hist-empty">Analizando anuncios del período…</div>';
   let adsP, adsM, stale=false, staleTs=0, warns=[];
   try{
@@ -2607,7 +2602,7 @@ async function renderAdsOpt(force){
                          : 'Error Meta: '+e.message+' — mostrando datos guardados');
     }else{
       el.innerHTML = '<div class="dropi-hist-empty">'+(blocked
-        ? '⏳ Meta limitó temporalmente las consultas (rate limit). No es tu dashboard ni GitHub — espera unos minutos y pulsa ↺ Analizar.'
+        ? '⏳ Meta limitó temporalmente las consultas (rate limit). Espera unos minutos y pulsa ↺ Analizar.'
         : 'Error Meta: '+e.message)+'</div>';
       return;
     }
@@ -2634,12 +2629,13 @@ function paintAdsOpt(adsP, adsM, stale, staleTs, warns){
     if(a.spend>0 || v>0 || a.st==='ACTIVE'){
       const m = monthById[a.id] || {spend:0, ventas:matchSales(a, salesM)};
       rows.push({...a, ventas:v, cpa: v>0 ? a.spend/v : 0,
-        vM:m.ventas, cpaM: m.ventas>0 ? m.spend/m.ventas : 0, prod: metaProductFromCampaign(a.camp)});
+        vM:m.ventas, sM:m.spend||0, cpaM: m.ventas>0 ? m.spend/m.ventas : 0,
+        prod: metaProductFromCampaign(a.camp)});
     }
   });
   Object.entries(salesP).forEach(([k,v])=>{
     if(!used.has(k)) rows.push({acc:'', id:k, name:'(sin gasto reportado en Meta)', camp:'', spend:0, st:'',
-      ventas:v, cpa:0, vM:salesM[k]||0, cpaM:0, prod:'—'});
+      ventas:v, cpa:0, vM:salesM[k]||0, sM:0, cpaM:0, prod:'—'});
   });
 
   const accIds = [...new Set(rows.map(r=>r.acc||'otros'))];
@@ -2648,7 +2644,8 @@ function paintAdsOpt(adsP, adsM, stale, staleTs, warns){
   const byProd = {};
   tabRows.forEach(r=>{ (byProd[r.prod] = byProd[r.prod]||[]).push(r); });
   const prodOrder = Object.entries(byProd)
-    .map(([p,list])=>({p, list, spend:list.reduce((x,y)=>x+y.spend,0), ventas:list.reduce((x,y)=>x+y.ventas,0)}))
+    .map(([p,list])=>({p, list, spend:list.reduce((x,y)=>x+y.spend,0), ventas:list.reduce((x,y)=>x+y.ventas,0),
+      spendM:list.reduce((x,y)=>x+(y.sM||0),0), ventasM:list.reduce((x,y)=>x+(y.vM||0),0)}))
     .sort((a,b)=>b.spend-a.spend);
 
   const cpaColor = c => c<=13000 ? '#34d399' : c<=17000 ? '#fb923c' : '#f87171';
@@ -2660,17 +2657,18 @@ function paintAdsOpt(adsP, adsM, stale, staleTs, warns){
     ? '<span title="Activo" style="color:#34d399">●</span>'
     : '<span title="'+(st||'?')+'" style="color:rgba(255,255,255,.3)">●</span>';
 
-  const GRID = '16px minmax(120px,1.3fr) 85px 44px 100px 58px 100px';
-  const head = '<div style="display:grid;grid-template-columns:'+GRID+';gap:8px;padding:6px 10px;font-size:.58rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:rgba(255,255,255,.35)">'
-    +'<span></span><span>Anuncio</span><span style="text-align:right">Gasto</span><span style="text-align:center">Vtas</span><span style="text-align:right">CPA período</span><span style="text-align:center">Vtas mes</span><span style="text-align:right">CPA mes</span></div>';
-  const row = a => '<div style="display:grid;grid-template-columns:'+GRID+';align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid rgba(255,255,255,.05)">'
+  const GRID = '16px minmax(105px,1.15fr) 78px 40px 92px 50px 92px 88px';
+  const head = '<div style="display:grid;grid-template-columns:'+GRID+';gap:7px;padding:6px 10px;font-size:.56rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:rgba(255,255,255,.35)">'
+    +'<span></span><span>Anuncio</span><span style="text-align:right">Gasto</span><span style="text-align:center">Vtas</span><span style="text-align:right">CPA período</span><span style="text-align:center">Vtas mes</span><span style="text-align:right">CPA mes</span><span style="text-align:right;color:#fbbf24">Gasto mes</span></div>';
+  const row = a => '<div style="display:grid;grid-template-columns:'+GRID+';align-items:center;gap:7px;padding:7px 10px;border-bottom:1px solid rgba(255,255,255,.05)">'
     +'<span style="text-align:center">'+stDot(a.st)+'</span>'
-    +'<div style="overflow:hidden"><div style="font-size:.76rem;font-weight:700;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+(a.name||a.id)+'">'+a.id+'</div></div>'
-    +'<span style="font-size:.78rem;font-weight:800;color:#f8fafc;text-align:right">'+fMeta(a.spend)+'</span>'
-    +'<span style="font-size:.78rem;font-weight:800;color:'+(a.ventas>0?'#34d399':'#f87171')+';text-align:center">'+a.ventas+'</span>'
+    +'<div style="overflow:hidden"><div style="font-size:.74rem;font-weight:700;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+(a.name||a.id)+'">'+a.id+'</div></div>'
+    +'<span style="font-size:.76rem;font-weight:800;color:#f8fafc;text-align:right">'+fMeta(a.spend)+'</span>'
+    +'<span style="font-size:.76rem;font-weight:800;color:'+(a.ventas>0?'#34d399':'#f87171')+';text-align:center">'+a.ventas+'</span>'
     +'<span style="text-align:right">'+(a.spend>0||a.ventas>0 ? cpaChip(a.cpa,a.ventas) : '<span style="font-size:.72rem;color:rgba(255,255,255,.3)">—</span>')+'</span>'
-    +'<span style="font-size:.78rem;font-weight:800;color:'+(a.vM>0?'#a7f3d0':'rgba(255,255,255,.35)')+';text-align:center">'+a.vM+'</span>'
-    +'<span style="text-align:right">'+(a.vM>0 ? cpaChip(a.cpaM,a.vM) : '<span style="font-size:.72rem;color:rgba(255,255,255,.3)">—</span>')+'</span></div>';
+    +'<span style="font-size:.76rem;font-weight:800;color:'+(a.vM>0?'#a7f3d0':'rgba(255,255,255,.35)')+';text-align:center">'+a.vM+'</span>'
+    +'<span style="text-align:right">'+(a.vM>0 ? cpaChip(a.cpaM,a.vM) : '<span style="font-size:.72rem;color:rgba(255,255,255,.3)">—</span>')+'</span>'
+    +'<span style="font-size:.76rem;font-weight:800;color:'+((a.sM||0)>0?'#fbbf24':'rgba(255,255,255,.3)')+';text-align:right">'+((a.sM||0)>0?fMeta(a.sM):'—')+'</span></div>';
 
   const tabs = accIds.map(id=>
     '<button onclick="adsOptTab=\''+id+'\';paintAdsOptRefresh()" style="background:'+(id===adsOptTab?'rgba(99,102,241,.25)':'rgba(255,255,255,.06)')
@@ -2685,6 +2683,44 @@ function paintAdsOpt(adsP, adsM, stale, staleTs, warns){
 
   window._adsOptLast = {adsP, adsM, stale, staleTs, warns};
 
+  // ── Resumen del MES (todas las cuentas) ──
+  const mesAll = {};
+  rows.forEach(r=>{
+    const a = r.acc||'otros';
+    if(!mesAll[a]) mesAll[a] = {s:0, v:0};
+    mesAll[a].s += (r.sM||0); mesAll[a].v += (r.vM||0);
+  });
+  const mList = Object.entries(mesAll).filter(([,v])=>v.s>0||v.v>0).sort((a,b)=>b[1].s-a[1].s);
+  const mTotS = mList.reduce((x,[,v])=>x+v.s,0);
+  const mTotV = mList.reduce((x,[,v])=>x+v.v,0);
+  let mesHtml = '';
+  if(mTotS || mTotV){
+    const mx = mList.length ? Math.max(mList[0][1].s,1) : 1;
+    const cpaT = mTotV>0 ? mTotS/mTotV : 0;
+    const cCol = cpaT===0?'rgba(255,255,255,.5)':cpaT<=13000?'#34d399':cpaT<=17000?'#fb923c':'#f87171';
+    mesHtml = '<div style="background:linear-gradient(135deg,#1e1b4b,#0f172a);border:1px solid rgba(251,191,36,.28);border-radius:12px;padding:18px 20px;margin-top:4px">'
+      +'<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:rgba(251,191,36,.8);margin-bottom:14px">📅 Gasto total del mes · '+fmtDisp(mStart)+' – '+fmtDisp(hoy)+'</div>'
+      +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">'
+      +'<div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:10px;padding:12px 14px">'
+      +'<div style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:rgba(255,255,255,.4);margin-bottom:6px">💸 Gasto del mes</div>'
+      +'<div style="font-size:1.5rem;font-weight:800;color:#fbbf24;line-height:1">'+fMeta(mTotS)+'</div></div>'
+      +'<div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:10px;padding:12px 14px">'
+      +'<div style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:rgba(255,255,255,.4);margin-bottom:6px">🛒 Ventas del mes</div>'
+      +'<div style="font-size:1.5rem;font-weight:800;color:#34d399;line-height:1">'+mTotV+'</div></div>'
+      +'<div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:10px;padding:12px 14px">'
+      +'<div style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:rgba(255,255,255,.4);margin-bottom:6px">🎯 CPA del mes</div>'
+      +'<div style="font-size:1.5rem;font-weight:800;color:'+cCol+';line-height:1">'+(cpaT>0?fMeta(cpaT):'—')+'</div></div></div>'
+      +mList.map(([id,v])=>{
+        const cp = v.v>0 ? v.s/v.v : 0;
+        const col = cp===0?'rgba(255,255,255,.4)':cp<=13000?'#34d399':cp<=17000?'#fb923c':'#f87171';
+        return '<div style="display:grid;grid-template-columns:minmax(110px,auto) 1fr 215px;align-items:center;gap:10px;padding:4px 0">'
+          +'<span style="font-size:.74rem;font-weight:800;color:#c7d2fe">'+accLabel(id==='otros'?'':id)+'</span>'
+          +'<div style="height:5px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden"><div style="height:100%;width:'+Math.round(v.s/mx*100)+'%;background:#fbbf24;border-radius:3px"></div></div>'
+          +'<span style="font-size:.74rem;font-weight:800;text-align:right;white-space:nowrap;color:#f8fafc">'+fMeta(v.s)+' · '+v.v+' vtas · <span style="color:'+col+'">'+(cp>0?fMeta(cp):'—')+'</span></span></div>';
+      }).join('')
+      +'<div style="font-size:.64rem;color:rgba(255,255,255,.3);margin-top:10px">Acumulado del mes en curso · incluye todos los anuncios con gasto o ventas</div></div>';
+  }
+
   el.innerHTML = warn
     + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">'+tabs+'</div>'
     + (prodOrder.length ? prodOrder.map(g=>{
@@ -2695,12 +2731,14 @@ function paintAdsOpt(adsP, adsM, stale, staleTs, warns){
         return '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;overflow:hidden;margin-bottom:12px">'
           +'<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(255,255,255,.04);flex-wrap:wrap;gap:6px">'
           +'<span style="font-size:.84rem;font-weight:800;color:#f8fafc">📦 '+g.p+'</span>'
-          +'<span style="font-size:.7rem;font-weight:700;color:rgba(255,255,255,.5)">'+fMeta(g.spend)+' · '+g.ventas+' ventas'
+          +'<span style="font-size:.7rem;font-weight:700;color:rgba(255,255,255,.5);text-align:right">'+fMeta(g.spend)+' · '+g.ventas+' ventas'
           +(sinV.length?' · <span style="color:#f87171">'+sinV.length+' sin vender ('+fMeta(gastoSin)+')</span>':'')
           +(sinG.length?' · <span style="color:rgba(255,255,255,.35)">'+sinG.length+' activos sin gasto</span>':'')
+          +'<br><span style="color:#fbbf24">MES: '+fMeta(g.spendM)+' · '+g.ventasM+' ventas'+(g.ventasM>0?' · CPA '+fMeta(g.spendM/g.ventasM):'')+'</span>'
           +'</span></div>'+head
           +'<div style="max-height:300px;overflow-y:auto">'+conV.map(row).join('')+sinV.map(row).join('')+sinG.map(row).join('')+'</div></div>';
-      }).join('') : '<div class="dropi-hist-empty">Sin anuncios en esta cuenta para el período</div>');
+      }).join('') : '<div class="dropi-hist-empty">Sin anuncios en esta cuenta para el período</div>')
+    + mesHtml;
 }
 function paintAdsOptRefresh(){
   const L = window._adsOptLast;
@@ -2812,7 +2850,6 @@ function renderMeta(){
   if(upd) upd.textContent = '🕐 ' + (metaData.updated_at_co || '—');
 }
 
-// Auto-llenado de Pauta: Meta SIEMPRE sobrescribe los productos que cruzan
 function applyMetaAutofill(date, combos){
   if(!metaData || !Array.isArray(metaData.rows)) return;
   const dayRows = metaData.rows.filter(r=>r.d===date);
@@ -3055,7 +3092,6 @@ function renderPauta(){
     }
   });
 
-  // Auto-llenar inversión/leads desde Meta API (Meta sobrescribe siempre)
   applyMetaAutofill(activeDate, combos);
 
   const keys = Object.keys(combos).sort();
@@ -3192,13 +3228,12 @@ function renderPautaSummary(){
   const rows  = allRows.filter(r=>r._d===activeDate);
   if(!rows.length){ document.getElementById('pauta-summary').style.display='none'; return; }
 
-  // Totales desde las tarjetas (suma de todos los productos con datos)
   let totalInv=0, totalLeads=0;
   Object.values(pautaData).forEach(d=>{
     totalInv   += parseFloat(String(d.inv||'').replace(/[^0-9.]/g,''))||0;
     totalLeads += parseFloat(String(d.leads||'').replace(/[^0-9.]/g,''))||0;
   });
-  // Con Meta conectado: usar gasto y leads GENERALES del día (TODAS las campañas)
+  // Con Meta conectado: gasto y leads GENERALES del día (TODAS las campañas)
   if(typeof metaData!=='undefined' && metaData && Array.isArray(metaData.rows)){
     const mRows = metaData.rows.filter(r=>r.d===activeDate);
     if(mRows.length){
