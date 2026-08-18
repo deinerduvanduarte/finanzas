@@ -2668,31 +2668,28 @@ function paintAdsOpt(adsP, adsM, stale, staleTs, warns){
   const GRID = '16px minmax(105px,1.15fr) 78px 40px 92px 50px 92px 88px';
   const head = '<div style="display:grid;grid-template-columns:'+GRID+';gap:7px;padding:6px 10px;font-size:.56rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:rgba(255,255,255,.35)">'
     +'<span></span><span>Anuncio</span><span style="text-align:right">Gasto</span><span style="text-align:center">Vtas</span><span style="text-align:right">CPA período</span><span style="text-align:center">Vtas mes</span><span style="text-align:right">CPA mes</span><span style="text-align:right;color:#fbbf24">Gasto mes</span></div>';
-  const row = a => '<div style="display:grid;grid-template-columns:'+GRID+';align-items:center;gap:7px;padding:7px 10px;border-bottom:1px solid rgba(255,255,255,.05)">'
+  // Fila (sirve para activos y apagados) — siempre con el nombre de la campaña
+  const row = a => { const on = a.st==='ACTIVE';
+    return '<div style="display:grid;grid-template-columns:'+GRID+';align-items:center;gap:7px;padding:7px 10px;border-bottom:1px solid rgba(255,255,255,.05)'+(on?'':';opacity:.85')+'">'
     +'<span style="text-align:center">'+stDot(a.st)+'</span>'
-    +'<div style="overflow:hidden"><div style="font-size:.74rem;font-weight:700;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+(a.name||a.id)+'">'+a.id+'</div></div>'
+    +'<div style="overflow:hidden">'
+      +'<div style="font-size:.73rem;font-weight:700;color:'+(on?'#e2e8f0':'rgba(226,232,240,.75)')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+(a.name||a.id)+'">'+a.id+'</div>'
+      +'<div style="font-size:.61rem;color:rgba(148,163,184,.8);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+(a.camp||'')+'">'+(a.camp||'—')+'</div>'
+    +'</div>'
     +'<span style="font-size:.76rem;font-weight:800;color:#f8fafc;text-align:right">'+fMeta(a.spend)+'</span>'
-    +'<span style="font-size:.76rem;font-weight:800;color:'+(a.ventas>0?'#34d399':'#f87171')+';text-align:center">'+a.ventas+'</span>'
+    +'<span style="font-size:.76rem;font-weight:800;color:'+(a.ventas>0?'#34d399':(on?'#f87171':'rgba(255,255,255,.35)'))+';text-align:center">'+a.ventas+'</span>'
     +'<span style="text-align:right">'+(a.spend>0||a.ventas>0 ? cpaChip(a.cpa,a.ventas) : '<span style="font-size:.72rem;color:rgba(255,255,255,.3)">—</span>')+'</span>'
     +'<span style="font-size:.76rem;font-weight:800;color:'+(a.vM>0?'#a7f3d0':'rgba(255,255,255,.35)')+';text-align:center">'+a.vM+'</span>'
     +'<span style="text-align:right">'+(a.vM>0 ? cpaChip(a.cpaM,a.vM) : '<span style="font-size:.72rem;color:rgba(255,255,255,.3)">—</span>')+'</span>'
-    +'<span style="font-size:.76rem;font-weight:800;color:'+((a.sM||0)>0?'#fbbf24':'rgba(255,255,255,.3)')+';text-align:right">'+((a.sM||0)>0?fMeta(a.sM):'—')+'</span></div>';
+    +'<span style="font-size:.76rem;font-weight:800;color:'+((a.sM||0)>0?'#fbbf24':'rgba(255,255,255,.3)')+';text-align:right">'+((a.sM||0)>0?fMeta(a.sM):'—')+'</span></div>'; };
 
-  const rowOff = a => '<div style="display:grid;grid-template-columns:'+GRID+';align-items:center;gap:7px;padding:7px 10px;border-bottom:1px solid rgba(255,255,255,.05);opacity:.85">'
-    +'<span style="text-align:center;color:rgba(255,255,255,.3)" title="Apagado">●</span>'
-    +'<div style="overflow:hidden">'
-      +'<div style="font-size:.72rem;font-weight:700;color:rgba(226,232,240,.75);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+(a.name||a.id)+'">'+a.id+'</div>'
-      +'<div style="font-size:.62rem;color:rgba(148,163,184,.75);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+(a.camp||'')+'">'+(a.camp||'—')+'</div>'
-    +'</div>'
-    +'<span style="font-size:.76rem;font-weight:800;color:rgba(248,250,252,.8);text-align:right">'+fMeta(a.spend)+'</span>'
-    +'<span style="font-size:.76rem;font-weight:800;color:'+(a.ventas>0?'#34d399':'rgba(255,255,255,.35)')+';text-align:center">'+a.ventas+'</span>'
-    +'<span style="text-align:right">'+(a.ventas>0 ? cpaChip(a.cpa,a.ventas) : '<span style="font-size:.72rem;color:rgba(255,255,255,.3)">—</span>')+'</span>'
-    +'<span style="font-size:.76rem;font-weight:800;color:'+(a.vM>0?'#a7f3d0':'rgba(255,255,255,.35)')+';text-align:center">'+a.vM+'</span>'
-    +'<span style="text-align:right">'+(a.vM>0 ? cpaChip(a.cpaM,a.vM) : '<span style="font-size:.72rem;color:rgba(255,255,255,.3)">—</span>')+'</span>'
-    +'<span style="font-size:.76rem;font-weight:800;color:'+((a.sM||0)>0?'#fbbf24':'rgba(255,255,255,.3)')+';text-align:right">'+((a.sM||0)>0?fMeta(a.sM):'—')+'</span></div>';
-
-  const subHead = (txt,col,extra) => '<div style="padding:8px 12px;background:'+col+';font-size:.68rem;font-weight:800;letter-spacing:.4px;color:#f8fafc;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px">'
-    +'<span>'+txt+'</span><span style="font-weight:700;opacity:.75">'+(extra||'')+'</span></div>';
+  // Pestañas Activos / Apagados por producto
+  window._adsSubTab = window._adsSubTab || {};
+  const subTab = pr => window._adsSubTab[pr] || 'act';
+  const pillBtn = (pr,val,txt,on,col) =>
+    '<button onclick="window._adsSubTab[\''+pr.replace(/'/g,"\\'")+'\']=\''+val+'\';paintAdsOptRefresh()" '
+    +'style="background:'+(on?col.bg:'rgba(255,255,255,.05)')+';border:1.5px solid '+(on?col.bd:'rgba(255,255,255,.1)')
+    +';color:'+(on?col.tx:'rgba(255,255,255,.45)')+';padding:5px 14px;border-radius:8px;font-size:.72rem;font-weight:800;cursor:pointer;font-family:var(--font)">'+txt+'</button>';
 
   const tabs = accIds.map(id=>
     '<button onclick="adsOptTab=\''+id+'\';paintAdsOptRefresh()" style="background:'+(id===adsOptTab?'rgba(99,102,241,.25)':'rgba(255,255,255,.06)')
@@ -2766,35 +2763,67 @@ function paintAdsOpt(adsP, adsM, stale, staleTs, warns){
 
   el.innerHTML = warn
     + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">'+tabs+'</div>'
-    + (prodOrder.length ? prodOrder.map(g=>{
-        const act = g.list.filter(x=>x.st==='ACTIVE');
-        const off = g.list.filter(x=>x.st!=='ACTIVE');
-        const conV = act.filter(x=>x.ventas>0).sort((a,b)=>b.spend-a.spend);
-        const sinV = act.filter(x=>x.ventas===0 && x.spend>0).sort((a,b)=>b.spend-a.spend);
-        const sinG = act.filter(x=>x.ventas===0 && x.spend===0);
-        const gastoSin = sinV.reduce((x,y)=>x+y.spend,0);
-        const offSort = off.sort((a,b)=>(b.sM||0)-(a.sM||0));
-        const offS  = offSort.reduce((x,y)=>x+(y.sM||0),0);
-        const offV  = offSort.reduce((x,y)=>x+(y.vM||0),0);
-        const actS  = act.reduce((x,y)=>x+y.spend,0);
-        const actV  = act.reduce((x,y)=>x+y.ventas,0);
-        return '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;overflow:hidden;margin-bottom:12px">'
-          +'<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(255,255,255,.04);flex-wrap:wrap;gap:6px">'
-          +'<span style="font-size:.84rem;font-weight:800;color:#f8fafc">📦 '+g.p+'</span>'
-          +'<span style="font-size:.7rem;font-weight:700;color:rgba(255,255,255,.5);text-align:right">'+fMeta(g.spend)+' · '+g.ventas+' ventas'
-          +(sinV.length?' · <span style="color:#f87171">'+sinV.length+' sin vender ('+fMeta(gastoSin)+')</span>':'')
-          +'<br><span style="color:#fbbf24">MES: '+fMeta(g.spendM)+' · '+g.ventasM+' ventas'+(g.ventasM>0?' · CPA '+fMeta(g.spendM/g.ventasM):'')+'</span>'
-          +'</span></div>'
-          // ── ACTIVOS ──
-          +(act.length ? subHead('✅ ACTIVOS · '+act.length+' anuncios','rgba(52,211,153,.12)',
-              fMeta(actS)+' · '+actV+' vtas'+(sinG.length?' · '+sinG.length+' sin gasto':''))
-            +head+'<div style="max-height:290px;overflow-y:auto">'+conV.map(row).join('')+sinV.map(row).join('')+sinG.map(row).join('')+'</div>' : '')
-          // ── APAGADOS ──
-          +(offSort.length ? subHead('⏸️ APAGADOS · '+offSort.length+' anuncios','rgba(148,163,184,.12)',
-              'MES: '+fMeta(offS)+' · '+offV+' vtas'+(offV>0?' · CPA '+fMeta(offS/offV):''))
-            +head+'<div style="max-height:290px;overflow-y:auto">'+offSort.map(rowOff).join('')+'</div>' : '')
-          +'</div>';
-      }).join('') : '<div class="dropi-hist-empty">Sin anuncios en esta cuenta para el período</div>')
+    + (function(){
+        const conAct = prodOrder.filter(g=>g.list.some(x=>x.st==='ACTIVE'));
+        const sinAct = prodOrder.filter(g=>!g.list.some(x=>x.st==='ACTIVE'));
+
+        // ── Productos CON anuncios activos: tarjeta con pestañas Activos | Apagados ──
+        const cards = conAct.map(g=>{
+          const act = g.list.filter(x=>x.st==='ACTIVE');
+          const off = g.list.filter(x=>x.st!=='ACTIVE').sort((a,b)=>(b.sM||0)-(a.sM||0));
+          const conV = act.filter(x=>x.ventas>0).sort((a,b)=>b.spend-a.spend);
+          const sinV = act.filter(x=>x.ventas===0 && x.spend>0).sort((a,b)=>b.spend-a.spend);
+          const sinG = act.filter(x=>x.ventas===0 && x.spend===0);
+          const gastoSin = sinV.reduce((x,y)=>x+y.spend,0);
+          const actS = act.reduce((x,y)=>x+y.spend,0), actV = act.reduce((x,y)=>x+y.ventas,0);
+          const offS = off.reduce((x,y)=>x+(y.sM||0),0), offV = off.reduce((x,y)=>x+(y.vM||0),0);
+          const tab = subTab(g.p);
+          const showOff = tab==='off' && off.length;
+          return '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;overflow:hidden;margin-bottom:12px">'
+            +'<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(255,255,255,.04);flex-wrap:wrap;gap:10px">'
+            +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
+            +'<span style="font-size:.84rem;font-weight:800;color:#f8fafc">📦 '+g.p+'</span>'
+            +pillBtn(g.p,'act','✅ Activos ('+act.length+')', tab!=='off', {bg:'rgba(52,211,153,.2)',bd:'#34d399',tx:'#a7f3d0'})
+            +pillBtn(g.p,'off','⏸️ Apagados ('+off.length+')', tab==='off', {bg:'rgba(148,163,184,.25)',bd:'#94a3b8',tx:'#e2e8f0'})
+            +'</div>'
+            +'<span style="font-size:.7rem;font-weight:700;color:rgba(255,255,255,.5);text-align:right">'+fMeta(g.spend)+' · '+g.ventas+' ventas'
+            +(sinV.length?' · <span style="color:#f87171">'+sinV.length+' sin vender ('+fMeta(gastoSin)+')</span>':'')
+            +'<br><span style="color:#fbbf24">MES: '+fMeta(g.spendM)+' · '+g.ventasM+' ventas'+(g.ventasM>0?' · CPA '+fMeta(g.spendM/g.ventasM):'')+'</span>'
+            +'</span></div>'
+            +'<div style="padding:7px 12px;background:'+(showOff?'rgba(148,163,184,.1)':'rgba(52,211,153,.08)')+';font-size:.66rem;font-weight:700;color:rgba(255,255,255,.6);display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px">'
+            +(showOff ? '<span>⏸️ Apagados de este producto</span><span>MES: '+fMeta(offS)+' · '+offV+' vtas'+(offV>0?' · CPA '+fMeta(offS/offV):'')+'</span>'
+                      : '<span>✅ Activos de este producto</span><span>'+fMeta(actS)+' · '+actV+' vtas'+(sinG.length?' · '+sinG.length+' sin gasto':'')+'</span>')
+            +'</div>'+head
+            +'<div style="max-height:290px;overflow-y:auto">'
+            +(showOff ? off.map(row).join('')
+                      : (act.length ? conV.map(row).join('')+sinV.map(row).join('')+sinG.map(row).join('')
+                                    : '<div style="padding:14px;text-align:center;font-size:.75rem;color:rgba(255,255,255,.3)">Sin anuncios activos</div>'))
+            +'</div></div>';
+        }).join('');
+
+        // ── Sección aparte: productos/campañas 100% apagados ──
+        let offSec = '';
+        if(sinAct.length){
+          const tS = sinAct.reduce((x,g)=>x+g.spendM,0);
+          const tV = sinAct.reduce((x,g)=>x+g.ventasM,0);
+          offSec = '<div style="background:rgba(148,163,184,.06);border:1px solid rgba(148,163,184,.25);border-radius:12px;padding:16px 18px;margin-bottom:12px">'
+            +'<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">'
+            +'<span style="font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:#cbd5e1">⏸️ Productos / campañas apagadas · '+sinAct.length+'</span>'
+            +'<span style="font-size:.72rem;font-weight:700;color:#fbbf24">MES: '+fMeta(tS)+' · '+tV+' vtas'+(tV>0?' · CPA '+fMeta(tS/tV):'')+'</span></div>'
+            +sinAct.map(g=>{
+              const ls = g.list.slice().sort((a,b)=>(b.sM||0)-(a.sM||0));
+              return '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:10px;overflow:hidden;margin-bottom:10px">'
+                +'<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 13px;background:rgba(255,255,255,.03);flex-wrap:wrap;gap:6px">'
+                +'<span style="font-size:.8rem;font-weight:800;color:rgba(248,250,252,.85)">📦 '+g.p+' <span style="font-size:.65rem;font-weight:700;color:rgba(148,163,184,.9);background:rgba(148,163,184,.15);padding:2px 8px;border-radius:20px;margin-left:4px">'+ls.length+' apagados</span></span>'
+                +'<span style="font-size:.7rem;font-weight:700;color:#fbbf24">MES: '+fMeta(g.spendM)+' · '+g.ventasM+' ventas'+(g.ventasM>0?' · CPA '+fMeta(g.spendM/g.ventasM):'')+'</span></div>'
+                +head+'<div style="max-height:240px;overflow-y:auto">'+ls.map(row).join('')+'</div></div>';
+            }).join('')
+            +'</div>';
+        }
+
+        if(!cards && !offSec) return '<div class="dropi-hist-empty">Sin anuncios en esta cuenta para el período</div>';
+        return cards + offSec;
+      })()
     + mesHtml;
 }
 function paintAdsOptRefresh(){
