@@ -2647,7 +2647,25 @@ function paintAdsOpt(adsP, adsM, stale, staleTs, warns){
   });
 
   const accIds = [...new Set(rows.map(r=>r.acc||'otros'))];
-  if(!adsOptTab || !accIds.includes(adsOptTab)) adsOptTab = accIds[0]||'';
+
+  // Productos SIN anuncios activos, agrupados por cuenta (pestaña "Productos apagados")
+  const offByAcc = {};
+  accIds.forEach(id=>{
+    const rs = rows.filter(r=>(r.acc||'otros')===id);
+    const bp = {};
+    rs.forEach(r=>{ (bp[r.prod] = bp[r.prod]||[]).push(r); });
+    const offs = Object.entries(bp)
+      .filter(([,l])=>!l.some(x=>x.st==='ACTIVE'))
+      .map(([pp,l])=>({p:pp, list:l,
+        spendM:l.reduce((x,y)=>x+(y.sM||0),0), ventasM:l.reduce((x,y)=>x+(y.vM||0),0)}))
+      .sort((a,b)=>b.spendM-a.spendM);
+    if(offs.length) offByAcc[id] = offs;
+  });
+  const offCount = Object.values(offByAcc).reduce((x,a)=>x+a.length,0);
+  const OFFTAB = '__off__';
+
+  const validTabs = accIds.concat(offCount ? [OFFTAB] : []);
+  if(!adsOptTab || !validTabs.includes(adsOptTab)) adsOptTab = accIds[0]||'';
   const tabRows = rows.filter(r=>(r.acc||'otros')===adsOptTab);
   const byProd = {};
   tabRows.forEach(r=>{ (byProd[r.prod] = byProd[r.prod]||[]).push(r); });
@@ -2695,7 +2713,11 @@ function paintAdsOpt(adsP, adsM, stale, staleTs, warns){
     '<button onclick="adsOptTab=\''+id+'\';paintAdsOptRefresh()" style="background:'+(id===adsOptTab?'rgba(99,102,241,.25)':'rgba(255,255,255,.06)')
     +';border:1.5px solid '+(id===adsOptTab?'#818cf8':'rgba(255,255,255,.12)')
     +';color:'+(id===adsOptTab?'#c7d2fe':'rgba(255,255,255,.5)')
-    +';padding:6px 16px;border-radius:8px;font-size:.78rem;font-weight:800;cursor:pointer;font-family:var(--font)">'+accLabel(id==='otros'?'':id)+'</button>').join('');
+    +';padding:6px 16px;border-radius:8px;font-size:.78rem;font-weight:800;cursor:pointer;font-family:var(--font)">'+accLabel(id==='otros'?'':id)+'</button>').join('')
+    + (offCount ? '<button onclick="adsOptTab=\''+OFFTAB+'\';paintAdsOptRefresh()" style="background:'+(adsOptTab===OFFTAB?'rgba(148,163,184,.28)':'rgba(255,255,255,.06)')
+        +';border:1.5px solid '+(adsOptTab===OFFTAB?'#94a3b8':'rgba(255,255,255,.12)')
+        +';color:'+(adsOptTab===OFFTAB?'#f1f5f9':'rgba(255,255,255,.5)')
+        +';padding:6px 16px;border-radius:8px;font-size:.78rem;font-weight:800;cursor:pointer;font-family:var(--font);margin-left:6px">⏸️ Productos apagados ('+offCount+')</button>' : '');
 
   const warnList = (warns||[]).slice();
   if(stale && staleTs) warnList.push('Datos guardados del '+new Date(staleTs).toLocaleString('es-CO',{timeZone:'America/Bogota'}));
@@ -2764,8 +2786,32 @@ function paintAdsOpt(adsP, adsM, stale, staleTs, warns){
   el.innerHTML = warn
     + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">'+tabs+'</div>'
     + (function(){
+        // ── PESTAÑA "PRODUCTOS APAGADOS": todas las cuentas ──
+        if(adsOptTab===OFFTAB){
+          const gT = Object.values(offByAcc).flat();
+          const tS = gT.reduce((x,g)=>x+g.spendM,0), tV = gT.reduce((x,g)=>x+g.ventasM,0);
+          return '<div style="background:rgba(148,163,184,.06);border:1px solid rgba(148,163,184,.25);border-radius:12px;padding:16px 18px">'
+            +'<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px">'
+            +'<span style="font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:#cbd5e1">⏸️ Productos / campañas apagadas · '+gT.length+'</span>'
+            +'<span style="font-size:.72rem;font-weight:700;color:#fbbf24">MES: '+fMeta(tS)+' · '+tV+' vtas'+(tV>0?' · CPA '+fMeta(tS/tV):'')+'</span></div>'
+            +Object.entries(offByAcc).map(([accId, offs])=>{
+              const aS = offs.reduce((x,g)=>x+g.spendM,0), aV = offs.reduce((x,g)=>x+g.ventasM,0);
+              return '<div style="margin-bottom:14px">'
+                +'<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;padding:6px 2px 10px">'
+                +'<span style="font-size:.76rem;font-weight:800;color:#c7d2fe">🏦 '+accLabel(accId==='otros'?'':accId)+' · '+offs.length+' producto'+(offs.length!==1?'s':'')+' apagado'+(offs.length!==1?'s':'')+'</span>'
+                +'<span style="font-size:.7rem;font-weight:700;color:#fbbf24">MES: '+fMeta(aS)+' · '+aV+' vtas'+(aV>0?' · CPA '+fMeta(aS/aV):'')+'</span></div>'
+                +offs.map(g=>{
+                  const ls = g.list.slice().sort((a,b)=>(b.sM||0)-(a.sM||0));
+                  return '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:10px;overflow:hidden;margin-bottom:10px">'
+                    +'<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 13px;background:rgba(255,255,255,.03);flex-wrap:wrap;gap:6px">'
+                    +'<span style="font-size:.8rem;font-weight:800;color:rgba(248,250,252,.85)">📦 '+g.p+' <span style="font-size:.65rem;font-weight:700;color:rgba(148,163,184,.9);background:rgba(148,163,184,.15);padding:2px 8px;border-radius:20px;margin-left:4px">'+ls.length+' apagados</span></span>'
+                    +'<span style="font-size:.7rem;font-weight:700;color:#fbbf24">MES: '+fMeta(g.spendM)+' · '+g.ventasM+' ventas'+(g.ventasM>0?' · CPA '+fMeta(g.spendM/g.ventasM):'')+'</span></div>'
+                    +head+'<div style="max-height:240px;overflow-y:auto">'+ls.map(row).join('')+'</div></div>';
+                }).join('')+'</div>';
+            }).join('')+'</div>';
+        }
+
         const conAct = prodOrder.filter(g=>g.list.some(x=>x.st==='ACTIVE'));
-        const sinAct = prodOrder.filter(g=>!g.list.some(x=>x.st==='ACTIVE'));
 
         // ── Productos CON anuncios activos: tarjeta con pestañas Activos | Apagados ──
         const cards = conAct.map(g=>{
@@ -2801,28 +2847,9 @@ function paintAdsOpt(adsP, adsM, stale, staleTs, warns){
             +'</div></div>';
         }).join('');
 
-        // ── Sección aparte: productos/campañas 100% apagados ──
-        let offSec = '';
-        if(sinAct.length){
-          const tS = sinAct.reduce((x,g)=>x+g.spendM,0);
-          const tV = sinAct.reduce((x,g)=>x+g.ventasM,0);
-          offSec = '<div style="background:rgba(148,163,184,.06);border:1px solid rgba(148,163,184,.25);border-radius:12px;padding:16px 18px;margin-bottom:12px">'
-            +'<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">'
-            +'<span style="font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:#cbd5e1">⏸️ Productos / campañas apagadas · '+sinAct.length+'</span>'
-            +'<span style="font-size:.72rem;font-weight:700;color:#fbbf24">MES: '+fMeta(tS)+' · '+tV+' vtas'+(tV>0?' · CPA '+fMeta(tS/tV):'')+'</span></div>'
-            +sinAct.map(g=>{
-              const ls = g.list.slice().sort((a,b)=>(b.sM||0)-(a.sM||0));
-              return '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:10px;overflow:hidden;margin-bottom:10px">'
-                +'<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 13px;background:rgba(255,255,255,.03);flex-wrap:wrap;gap:6px">'
-                +'<span style="font-size:.8rem;font-weight:800;color:rgba(248,250,252,.85)">📦 '+g.p+' <span style="font-size:.65rem;font-weight:700;color:rgba(148,163,184,.9);background:rgba(148,163,184,.15);padding:2px 8px;border-radius:20px;margin-left:4px">'+ls.length+' apagados</span></span>'
-                +'<span style="font-size:.7rem;font-weight:700;color:#fbbf24">MES: '+fMeta(g.spendM)+' · '+g.ventasM+' ventas'+(g.ventasM>0?' · CPA '+fMeta(g.spendM/g.ventasM):'')+'</span></div>'
-                +head+'<div style="max-height:240px;overflow-y:auto">'+ls.map(row).join('')+'</div></div>';
-            }).join('')
-            +'</div>';
-        }
-
-        if(!cards && !offSec) return '<div class="dropi-hist-empty">Sin anuncios en esta cuenta para el período</div>';
-        return cards + offSec;
+        if(!cards) return '<div class="dropi-hist-empty">Sin productos activos en esta cuenta'
+          +(offCount?' — mira la pestaña <b>⏸️ Productos apagados</b>':'')+'</div>';
+        return cards;
       })()
     + mesHtml;
 }
