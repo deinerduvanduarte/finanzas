@@ -2701,6 +2701,51 @@ function paintAdsOpt(adsP, adsM, stale, staleTs, warns){
     +'<span style="text-align:right">'+(a.vM>0 ? cpaChip(a.cpaM,a.vM) : '<span style="font-size:.72rem;color:rgba(255,255,255,.3)">—</span>')+'</span>'
     +'<span style="font-size:.76rem;font-weight:800;color:'+((a.sM||0)>0?'#fbbf24':'rgba(255,255,255,.3)')+';text-align:right">'+((a.sM||0)>0?fMeta(a.sM):'—')+'</span></div>'; };
 
+  // Vista por producto: ID anuncio | Campaña
+  window._adsView = window._adsView || {};
+  window._adsCampOpen = window._adsCampOpen || {};
+  const adsView = pr => window._adsView[pr] || 'ad';
+  const kSafe = t => 'c'+String(t||'').replace(/[^A-Za-z0-9]/g,'').slice(0,40)+String(t||'').length;
+
+  // Bloque agrupado por campaña, con desplegable de anuncios
+  const campBlock = list => {
+    const byC = {};
+    list.forEach(a=>{ const c = a.camp||'(sin campaña)'; (byC[c] = byC[c]||[]).push(a); });
+    const arr = Object.entries(byC).map(([c,l])=>({c, l,
+      s:l.reduce((x,y)=>x+y.spend,0), v:l.reduce((x,y)=>x+y.ventas,0),
+      sM:l.reduce((x,y)=>x+(y.sM||0),0), vM:l.reduce((x,y)=>x+(y.vM||0),0),
+      on:l.some(x=>x.st==='ACTIVE'), nAct:l.filter(x=>x.st==='ACTIVE').length}))
+      .sort((a,b)=>b.s-a.s || b.sM-a.sM);
+    const mx = arr.length ? Math.max(arr[0].s, 1) : 1;
+    return arr.map(g=>{
+      const k = kSafe(g.c);
+      const open = !!window._adsCampOpen[k];
+      const cpa  = g.v>0 ? g.s/g.v : 0;
+      const cpaM = g.vM>0 ? g.sM/g.vM : 0;
+      return '<div style="border-bottom:1px solid rgba(255,255,255,.06)">'
+        +'<div onclick="window._adsCampOpen[\''+k+'\']=!window._adsCampOpen[\''+k+'\'];paintAdsOptRefresh()" '
+        +'style="display:grid;grid-template-columns:'+GRID+';align-items:center;gap:7px;padding:9px 10px;cursor:pointer;background:'+(open?'rgba(129,140,248,.1)':'transparent')+'">'
+        +'<span style="text-align:center;font-size:.6rem;color:'+(g.on?'#34d399':'rgba(255,255,255,.3)')+'">'+(open?'▾':'▸')+'</span>'
+        +'<div style="overflow:hidden">'
+          +'<div style="font-size:.74rem;font-weight:800;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+g.c+'">'+g.c+'</div>'
+          +'<div style="font-size:.6rem;color:rgba(148,163,184,.85)">'+g.l.length+' anuncio'+(g.l.length!==1?'s':'')+' · '+g.nAct+' activo'+(g.nAct!==1?'s':'')
+          +'<span style="display:inline-block;width:60px;height:3px;background:rgba(255,255,255,.1);border-radius:2px;margin-left:7px;vertical-align:middle"><span style="display:block;height:100%;width:'+Math.round(g.s/mx*100)+'%;background:#34d399;border-radius:2px"></span></span></div>'
+        +'</div>'
+        +'<span style="font-size:.78rem;font-weight:800;color:#f8fafc;text-align:right">'+fMeta(g.s)+'</span>'
+        +'<span style="font-size:.78rem;font-weight:800;color:'+(g.v>0?'#34d399':'rgba(255,255,255,.35)')+';text-align:center">'+g.v+'</span>'
+        +'<span style="text-align:right">'+(g.v>0?cpaChip(cpa,g.v):'<span style="font-size:.72rem;color:rgba(255,255,255,.3)">—</span>')+'</span>'
+        +'<span style="font-size:.78rem;font-weight:800;color:'+(g.vM>0?'#a7f3d0':'rgba(255,255,255,.35)')+';text-align:center">'+g.vM+'</span>'
+        +'<span style="text-align:right">'+(g.vM>0?cpaChip(cpaM,g.vM):'<span style="font-size:.72rem;color:rgba(255,255,255,.3)">—</span>')+'</span>'
+        +'<span style="font-size:.78rem;font-weight:800;color:'+(g.sM>0?'#fbbf24':'rgba(255,255,255,.3)')+';text-align:right">'+(g.sM>0?fMeta(g.sM):'—')+'</span>'
+        +'</div>'
+        +(open ? '<div style="background:rgba(0,0,0,.18);padding:2px 0 6px 0">'
+            +'<div style="font-size:.58rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:rgba(255,255,255,.3);padding:6px 10px 4px 34px">Anuncios de esta campaña</div>'
+            +g.l.slice().sort((a,b)=>b.spend-a.spend || (b.sM||0)-(a.sM||0)).map(row).join('')
+            +'</div>' : '')
+        +'</div>';
+    }).join('');
+  };
+
   // Pestañas Activos / Apagados por producto
   window._adsSubTab = window._adsSubTab || {};
   const subTab = pr => window._adsSubTab[pr] || 'act';
@@ -2824,6 +2869,7 @@ function paintAdsOpt(adsP, adsM, stale, staleTs, warns){
           const actS = act.reduce((x,y)=>x+y.spend,0), actV = act.reduce((x,y)=>x+y.ventas,0);
           const offS = off.reduce((x,y)=>x+(y.sM||0),0), offV = off.reduce((x,y)=>x+(y.vM||0),0);
           const tab = subTab(g.p);
+          const vw  = adsView(g.p);
           const showOff = tab==='off' && off.length;
           return '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;overflow:hidden;margin-bottom:12px">'
             +'<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(255,255,255,.04);flex-wrap:wrap;gap:10px">'
@@ -2831,19 +2877,24 @@ function paintAdsOpt(adsP, adsM, stale, staleTs, warns){
             +'<span style="font-size:.84rem;font-weight:800;color:#f8fafc">📦 '+g.p+'</span>'
             +pillBtn(g.p,'act','✅ Activos ('+act.length+')', tab!=='off', {bg:'rgba(52,211,153,.2)',bd:'#34d399',tx:'#a7f3d0'})
             +pillBtn(g.p,'off','⏸️ Apagados ('+off.length+')', tab==='off', {bg:'rgba(148,163,184,.25)',bd:'#94a3b8',tx:'#e2e8f0'})
+            +'<span style="width:1px;height:20px;background:rgba(255,255,255,.15);margin:0 3px"></span>'
+            +'<button onclick="window._adsView[\''+g.p.replace(/'/g,"\\'")+'\']=\'ad\';paintAdsOptRefresh()" style="background:'+(vw==='ad'?'rgba(99,102,241,.25)':'rgba(255,255,255,.05)')+';border:1.5px solid '+(vw==='ad'?'#818cf8':'rgba(255,255,255,.1)')+';color:'+(vw==='ad'?'#c7d2fe':'rgba(255,255,255,.45)')+';padding:5px 12px;border-radius:8px;font-size:.71rem;font-weight:800;cursor:pointer;font-family:var(--font)">🎯 ID anuncio</button>'
+            +'<button onclick="window._adsView[\''+g.p.replace(/'/g,"\\'")+'\']=\'camp\';paintAdsOptRefresh()" style="background:'+(vw==='camp'?'rgba(99,102,241,.25)':'rgba(255,255,255,.05)')+';border:1.5px solid '+(vw==='camp'?'#818cf8':'rgba(255,255,255,.1)')+';color:'+(vw==='camp'?'#c7d2fe':'rgba(255,255,255,.45)')+';padding:5px 12px;border-radius:8px;font-size:.71rem;font-weight:800;cursor:pointer;font-family:var(--font)">📣 Campaña</button>'
             +'</div>'
             +'<span style="font-size:.7rem;font-weight:700;color:rgba(255,255,255,.5);text-align:right">'+fMeta(g.spend)+' · '+g.ventas+' ventas'
             +(sinV.length?' · <span style="color:#f87171">'+sinV.length+' sin vender ('+fMeta(gastoSin)+')</span>':'')
             +'<br><span style="color:#fbbf24">MES: '+fMeta(g.spendM)+' · '+g.ventasM+' ventas'+(g.ventasM>0?' · CPA '+fMeta(g.spendM/g.ventasM):'')+'</span>'
             +'</span></div>'
             +'<div style="padding:7px 12px;background:'+(showOff?'rgba(148,163,184,.1)':'rgba(52,211,153,.08)')+';font-size:.66rem;font-weight:700;color:rgba(255,255,255,.6);display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px">'
-            +(showOff ? '<span>⏸️ Apagados de este producto</span><span>MES: '+fMeta(offS)+' · '+offV+' vtas'+(offV>0?' · CPA '+fMeta(offS/offV):'')+'</span>'
-                      : '<span>✅ Activos de este producto</span><span>'+fMeta(actS)+' · '+actV+' vtas'+(sinG.length?' · '+sinG.length+' sin gasto':'')+'</span>')
+            +(showOff ? '<span>⏸️ Apagados de este producto'+(vw==='camp'?' · por campaña':'')+'</span><span>MES: '+fMeta(offS)+' · '+offV+' vtas'+(offV>0?' · CPA '+fMeta(offS/offV):'')+'</span>'
+                      : '<span>✅ Activos de este producto'+(vw==='camp'?' · por campaña (clic para desplegar)':'')+'</span><span>'+fMeta(actS)+' · '+actV+' vtas'+(sinG.length?' · '+sinG.length+' sin gasto':'')+'</span>')
             +'</div>'+head
-            +'<div style="max-height:290px;overflow-y:auto">'
-            +(showOff ? off.map(row).join('')
-                      : (act.length ? conV.map(row).join('')+sinV.map(row).join('')+sinG.map(row).join('')
-                                    : '<div style="padding:14px;text-align:center;font-size:.75rem;color:rgba(255,255,255,.3)">Sin anuncios activos</div>'))
+            +'<div style="max-height:340px;overflow-y:auto">'
+            +(vw==='camp'
+              ? campBlock(showOff ? off : act)
+              : (showOff ? off.map(row).join('')
+                         : (act.length ? conV.map(row).join('')+sinV.map(row).join('')+sinG.map(row).join('')
+                                       : '<div style="padding:14px;text-align:center;font-size:.75rem;color:rgba(255,255,255,.3)">Sin anuncios activos</div>')))
             +'</div></div>';
         }).join('');
 
@@ -3106,6 +3157,86 @@ function renderPauta(){
       <div class="prs-item"><div class="prs-lbl">🛒 Ventas período</div><div class="prs-val" style="color:var(--green)">${totalVentas}</div><div class="prs-sub">${cpa>0?'CPA '+fC(cpa):'—'}</div></div>
       <div class="prs-item"><div class="prs-lbl">🔁 Conversión</div><div class="prs-val" style="color:var(--blue)">${conv>0?conv.toFixed(1)+'%':'—'}</div><div class="prs-sub">${part>0?part.toFixed(1)+'% de la fact.':'—'}</div></div>
     `;
+
+    // ── Conversión y CPA por producto en el período seleccionado ──
+    (function(){
+      let cont = document.getElementById('prs-prod');
+      if(!cont){
+        cont = document.createElement('div');
+        cont.id = 'prs-prod';
+        cont.style.marginTop = '14px';
+        const host = document.querySelector('#pauta-range-mode .pauta-range-summary');
+        if(host) host.appendChild(cont);
+      }
+      if(!cont) return;
+
+      // Ventas / facturación por producto (Sheets, período)
+      const sp = {};
+      rows.forEach(r=>{
+        const pp = r.producto || 'Sin producto';
+        if(!sp[pp]) sp[pp] = {ventas:0, desp:0, fact:0};
+        sp[pp].ventas++; sp[pp].fact += r.valor||0;
+        if(r.estado==='despachado') sp[pp].desp++;
+      });
+      // Inversión / leads por producto (Meta, período)
+      const mp = {};
+      if(typeof metaData!=='undefined' && metaData && Array.isArray(metaData.rows)){
+        metaData.rows.filter(r=>r.d>=curFrom && r.d<=curTo).forEach(r=>{
+          const pm = metaProductFromCampaign(r.c);
+          if(!mp[pm]) mp[pm] = {inv:0, leads:0};
+          mp[pm].inv += r.s; mp[pm].leads += r.l;
+        });
+      }
+      // Cruzar Meta → productos del Sheets (reparto proporcional a las ventas)
+      const keysS = Object.keys(sp);
+      const inv = {}, lds = {};
+      let resInv = 0, resLds = 0;
+      Object.keys(mp).forEach(m=>{
+        const ks = keysS.filter(k=>prodMatch(k, m));
+        if(!ks.length){ resInv += mp[m].inv; resLds += mp[m].leads; return; }
+        const tot = ks.reduce((x,k)=>x+sp[k].ventas, 0);
+        ks.forEach(k=>{
+          const sh = tot>0 ? sp[k].ventas/tot : 1/ks.length;
+          inv[k] = (inv[k]||0) + mp[m].inv*sh;
+          lds[k] = (lds[k]||0) + mp[m].leads*sh;
+        });
+      });
+
+      const list = keysS.map(k=>({p:k, ...sp[k], inv:inv[k]||0, leads:Math.round(lds[k]||0)}))
+        .sort((a,b)=>b.inv-a.inv || b.ventas-a.ventas);
+      if(!list.length){ cont.innerHTML=''; return; }
+      const fC2 = x=>'$'+Math.round(x).toLocaleString('es-CO');
+      const cCol = c => c<=13000 ? 'var(--green)' : c<=17000 ? '#ea580c' : 'var(--red)';
+      const G = 'minmax(120px,1.5fr) 105px 62px 52px 88px 95px 68px 66px';
+      cont.innerHTML = '<div class="prs-title" style="margin-bottom:10px">🎯 Conversión y CPA por producto · '
+          +(curFrom===curTo?fmtDisp(curFrom):fmtDisp(curFrom)+' – '+fmtDisp(curTo))+'</div>'
+        +'<div style="overflow-x:auto"><div style="min-width:640px">'
+        +'<div style="display:grid;grid-template-columns:'+G+';gap:8px;padding:6px 10px;font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);border-bottom:1px solid var(--border)">'
+        +'<span>Producto</span><span style="text-align:right">Inversión</span><span style="text-align:center">Leads</span>'
+        +'<span style="text-align:center">Vtas</span><span style="text-align:right">CPL</span>'
+        +'<span style="text-align:right">CPA</span><span style="text-align:center">Conv.</span><span style="text-align:center">Desp.</span></div>'
+        +list.map(x=>{
+          const cpl = x.leads>0 ? x.inv/x.leads : 0;
+          const cpa = x.ventas>0 ? x.inv/x.ventas : 0;
+          const cv  = x.leads>0 ? x.ventas/x.leads*100 : 0;
+          const dp  = x.ventas>0 ? x.desp/x.ventas*100 : 0;
+          return '<div style="display:grid;grid-template-columns:'+G+';gap:8px;padding:8px 10px;align-items:center;border-bottom:1px solid var(--border)">'
+            +'<span style="font-size:.83rem;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+x.p+'">'+x.p+'</span>'
+            +'<span style="font-size:.82rem;font-weight:800;color:var(--amber);text-align:right">'+(x.inv>0?fC2(x.inv):'—')+'</span>'
+            +'<span style="font-size:.82rem;font-weight:700;color:var(--ink2);text-align:center">'+(x.leads||'—')+'</span>'
+            +'<span style="font-size:.82rem;font-weight:800;color:var(--green);text-align:center">'+x.ventas+'</span>'
+            +'<span style="font-size:.8rem;font-weight:700;color:var(--ink2);text-align:right">'+(cpl>0?fC2(cpl):'—')+'</span>'
+            +'<span style="font-size:.82rem;font-weight:800;text-align:right;color:'+(cpa>0?cCol(cpa):'var(--muted)')+'">'+(cpa>0?fC2(cpa):'—')+'</span>'
+            +'<span style="font-size:.82rem;font-weight:800;color:var(--blue);text-align:center">'+(cv>0?cv.toFixed(1)+'%':'—')+'</span>'
+            +'<span style="font-size:.78rem;font-weight:700;color:'+(dp>=80?'var(--green)':dp>=60?'var(--amber)':'var(--red)')+';text-align:center">'+(x.ventas>0?Math.round(dp)+'%':'—')+'</span></div>';
+        }).join('')
+        +(resInv>0 ? '<div style="display:grid;grid-template-columns:'+G+';gap:8px;padding:8px 10px;align-items:center;background:var(--surface2)">'
+            +'<span style="font-size:.78rem;font-weight:700;color:var(--muted)">Sin producto cruzado</span>'
+            +'<span style="font-size:.8rem;font-weight:800;color:var(--muted);text-align:right">'+fC2(resInv)+'</span>'
+            +'<span style="font-size:.8rem;color:var(--muted);text-align:center">'+Math.round(resLds)+'</span>'
+            +'<span style="text-align:center;color:var(--muted)">—</span><span></span><span></span><span></span><span></span></div>' : '')
+        +'</div></div>';
+    })();
 
     // Top anuncios por producto del período
     // Agrupar: producto → { adId → conteo }
