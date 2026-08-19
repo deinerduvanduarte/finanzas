@@ -5,12 +5,22 @@
 
 const fs = require('fs');
 
-// ── CONFIG ─────────────────────────────────────────────────────
+// ╔══════════════════════════════════════════════════════════════════╗
+// ║  ⚙️  CUENTAS A SINCRONIZAR — EDITA SOLO ESTA LISTA                ║
+// ╠══════════════════════════════════════════════════════════════════╣
+// ║ Para AGREGAR una cuenta: añade una línea con su act_XXXXX.        ║
+// ║ Para QUITARLA: borra o comenta la línea con //                    ║
+// ║                                                                   ║
+// ║ ⚠️  La cuenta debe estar asignada al usuario del sistema           ║
+// ║     "dashboard-sync" con permiso "Ver rendimiento", y el mismo    ║
+// ║     act_XXXXX debe estar en META_CUENTAS dentro de dashboard.html ║
+// ╚══════════════════════════════════════════════════════════════════╝
 const ACCOUNTS = [
   'act_2235837880587647', // NEXORA 1
   'act_763369709939342',  // NEXORA 2
-  // agrega más cuentas aquí: 'act_XXXXXXXX',
+  // 'act_XXXXXXXXXXXX',  // MI CUENTA 3
 ];
+// ── Fin de la configuración · no hace falta tocar nada más abajo ──
 const API = 'https://graph.facebook.com/v21.0';
 const TOKEN = process.env.META_TOKEN;
 const DAYS_BACK = 30;
