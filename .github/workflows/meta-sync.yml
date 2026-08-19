@@ -18,6 +18,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -29,14 +31,30 @@ jobs:
           META_TOKEN: ${{ secrets.META_TOKEN }}
         run: node scripts/meta_sync.js
 
-      - name: Commit meta_data.json
+      - name: Commit y push (con reintentos)
         run: |
-          git config user.name "meta-sync-bot"
+          git config user.name  "meta-sync-bot"
           git config user.email "actions@github.com"
           git add meta_data.json
           if git diff --cached --quiet; then
-            echo "Sin cambios"
-          else
-            git commit -m "sync: meta_data.json [skip ci]"
-            git push
+            echo "Sin cambios en meta_data.json"
+            exit 0
           fi
+          git commit -m "sync: meta_data.json [skip ci]"
+          # Reintenta hasta 5 veces: si alguien más hizo push, rebasa y vuelve a intentar
+          for i in 1 2 3 4 5; do
+            if git push; then
+              echo "Push OK en el intento $i"
+              exit 0
+            fi
+            echo "Push rechazado (intento $i) — rebasando sobre origin/main…"
+            git pull --rebase --autostash origin main || {
+              echo "Rebase falló; conservando nuestra versión del JSON"
+              git checkout --ours meta_data.json 2>/dev/null || true
+              git add meta_data.json 2>/dev/null || true
+              git rebase --continue 2>/dev/null || git rebase --skip 2>/dev/null || true
+            }
+            sleep $((i * 5))
+          done
+          echo "No se pudo hacer push tras 5 intentos"
+          exit 1
