@@ -1,6 +1,6 @@
 {
- "updated_at": "2026-08-22T00:46:12.823Z",
- "updated_at_co": "21/8/2026, 7:46:12 p. m.",
+ "updated_at": "2026-08-22T02:07:15.643Z",
+ "updated_at_co": "21/8/2026, 9:07:15 p. m.",
  "since": "2026-07-22",
  "until": "2026-08-21",
  "accounts": [
@@ -21,99 +21,99 @@
  ],
  "today": {
   "date": "2026-08-21",
-  "spend": 647338,
-  "leads": 395,
+  "spend": 702199,
+  "leads": 438,
   "campaigns": [
    {
     "account": "act_2235837880587647",
     "campaign_id": "52650940176910",
     "campaign_name": "🔴08-07|NEXORA|BURURAN|CBO|ADS 3",
-    "spend": 120255,
-    "leads": 64
+    "spend": 128643,
+    "leads": 69
    },
    {
     "account": "act_2235837880587647",
     "campaign_id": "52632751972310",
     "campaign_name": "🔵19-06|NEXORA|CBO|BURURAN",
-    "spend": 103351,
-    "leads": 76
+    "spend": 111163,
+    "leads": 82
    },
    {
     "account": "act_2235837880587647",
     "campaign_id": "52658547871310",
     "campaign_name": "🔴28-07|NEXORA|BURURAN|POSD ID",
-    "spend": 62484,
-    "leads": 24
+    "spend": 68257,
+    "leads": 27
    },
    {
     "account": "act_763369709939342",
     "campaign_id": "120248594070560194",
     "campaign_name": "🟡15-07|NEXORA|BURURAN|CBO| ADS 1",
-    "spend": 52783,
-    "leads": 47
-   },
-   {
-    "account": "act_763369709939342",
-    "campaign_id": "120249352595670194",
-    "campaign_name": "🟡12-08|NEXORA|CYPERUS OIL|39.900|CBO - Copia",
-    "spend": 46781,
-    "leads": 47
+    "spend": 57666,
+    "leads": 56
    },
    {
     "account": "act_763369709939342",
     "campaign_id": "120249410765240194",
     "campaign_name": "🔴15-08|NEXORA|BURURAN|CBO|NX 1 GNADORES",
-    "spend": 45733,
-    "leads": 27
+    "spend": 51380,
+    "leads": 29
+   },
+   {
+    "account": "act_763369709939342",
+    "campaign_id": "120249352595670194",
+    "campaign_name": "🟡12-08|NEXORA|CYPERUS OIL|39.900|CBO - Copia",
+    "spend": 49379,
+    "leads": 52
    },
    {
     "account": "act_763369709939342",
     "campaign_id": "120249410702780194",
     "campaign_name": "🔵15-08|NEXORA|BURURAN|CBO|149",
-    "spend": 41667,
-    "leads": 8
+    "spend": 45954,
+    "leads": 11
    },
    {
     "account": "act_2235837880587647",
     "campaign_id": "52643639324310",
     "campaign_name": "🟡27-06|NEXORA|BURURAN|GANADOR|CBO",
-    "spend": 38963,
-    "leads": 23
+    "spend": 41151,
+    "leads": 24
    },
    {
     "account": "act_763369709939342",
     "campaign_id": "120249410866250194",
     "campaign_name": "🟡15-08|NEXORA|BURURAN|ABO|VARIACIONES",
-    "spend": 37014,
-    "leads": 14
+    "spend": 40199,
+    "leads": 15
    },
    {
     "account": "act_763369709939342",
     "campaign_id": "120248927340750194",
     "campaign_name": "🔵28-07|NEXORA|BURURAN|CBO",
-    "spend": 35137,
-    "leads": 8
+    "spend": 37943,
+    "leads": 9
    },
    {
     "account": "act_763369709939342",
     "campaign_id": "120249411178700194",
     "campaign_name": "🔵15-08|NEXORA|CREMA LUVORA|CBO",
-    "spend": 32803,
-    "leads": 32
+    "spend": 36219,
+    "leads": 37
    },
    {
     "account": "act_763369709939342",
     "campaign_id": "120247838992590194",
     "campaign_name": "🟡27-06|NEXORA|BURURAN|GANADORES|ABO|POSD ID",
-    "spend": 17087,
+    "spend": 19985,
     "leads": 10
    },
    {
     "account": "act_763369709939342",
     "campaign_id": "120249411066990194",
     "campaign_name": "🟡15-08|NEXORA|CREMA LUVORA|ABO",
-    "spend": 13280,
-    "leads": 15
+    "spend": 14260,
+    "leads": 17
    },
    {
     "account": "act_2235837880587647",
@@ -267,18 +267,18 @@
   },
   {
    "date": "2026-08-19",
-   "spend": 887410,
+   "spend": 887443,
    "leads": 528
   },
   {
    "date": "2026-08-20",
-   "spend": 783208,
+   "spend": 783369,
    "leads": 491
   },
   {
    "date": "2026-08-21",
-   "spend": 647338,
-   "leads": 395
+   "spend": 702199,
+   "leads": 438
   }
  ],
  "budgets": [
@@ -1579,7 +1579,7 @@
    "d": "2026-08-19",
    "a": "act_2235837880587647",
    "c": "🔴28-07|NEXORA|BURURAN|POSD ID",
-   "s": 68023,
+   "s": 68056,
    "l": 30
   },
   {
@@ -1593,28 +1593,28 @@
    "d": "2026-08-20",
    "a": "act_2235837880587647",
    "c": "🔵19-06|NEXORA|CBO|BURURAN",
-   "s": 122844,
+   "s": 122849,
    "l": 77
   },
   {
    "d": "2026-08-20",
    "a": "act_2235837880587647",
    "c": "🟡27-06|NEXORA|BURURAN|GANADOR|CBO",
-   "s": 49142,
+   "s": 49158,
    "l": 22
   },
   {
    "d": "2026-08-20",
    "a": "act_2235837880587647",
    "c": "🔴08-07|NEXORA|BURURAN|CBO|ADS 3",
-   "s": 133770,
+   "s": 133848,
    "l": 65
   },
   {
    "d": "2026-08-20",
    "a": "act_2235837880587647",
    "c": "🔴28-07|NEXORA|BURURAN|POSD ID",
-   "s": 70896,
+   "s": 70897,
    "l": 36
   },
   {
@@ -1628,29 +1628,29 @@
    "d": "2026-08-21",
    "a": "act_2235837880587647",
    "c": "🔵19-06|NEXORA|CBO|BURURAN",
-   "s": 103351,
-   "l": 76
+   "s": 111163,
+   "l": 82
   },
   {
    "d": "2026-08-21",
    "a": "act_2235837880587647",
    "c": "🟡27-06|NEXORA|BURURAN|GANADOR|CBO",
-   "s": 38963,
-   "l": 23
+   "s": 41151,
+   "l": 24
   },
   {
    "d": "2026-08-21",
    "a": "act_2235837880587647",
    "c": "🔴08-07|NEXORA|BURURAN|CBO|ADS 3",
-   "s": 120255,
-   "l": 64
+   "s": 128643,
+   "l": 69
   },
   {
    "d": "2026-08-21",
    "a": "act_2235837880587647",
    "c": "🔴28-07|NEXORA|BURURAN|POSD ID",
-   "s": 62484,
-   "l": 24
+   "s": 68257,
+   "l": 27
   },
   {
    "d": "2026-08-21",
@@ -2930,21 +2930,21 @@
    "d": "2026-08-20",
    "a": "act_763369709939342",
    "c": "🟡27-06|NEXORA|BURURAN|GANADORES|ABO|POSD ID",
-   "s": 25772,
+   "s": 25801,
    "l": 14
   },
   {
    "d": "2026-08-20",
    "a": "act_763369709939342",
    "c": "🟡15-07|NEXORA|BURURAN|CBO| ADS 1",
-   "s": 58245,
+   "s": 58252,
    "l": 42
   },
   {
    "d": "2026-08-20",
    "a": "act_763369709939342",
    "c": "🔵28-07|NEXORA|BURURAN|CBO",
-   "s": 39421,
+   "s": 39428,
    "l": 9
   },
   {
@@ -2958,7 +2958,7 @@
    "d": "2026-08-20",
    "a": "act_763369709939342",
    "c": "🔵15-08|NEXORA|BURURAN|CBO|149",
-   "s": 53468,
+   "s": 53480,
    "l": 15
   },
   {
@@ -2986,71 +2986,71 @@
    "d": "2026-08-20",
    "a": "act_763369709939342",
    "c": "🔵15-08|NEXORA|CREMA LUVORA|CBO",
-   "s": 50810,
+   "s": 50816,
    "l": 70
   },
   {
    "d": "2026-08-21",
    "a": "act_763369709939342",
    "c": "🟡27-06|NEXORA|BURURAN|GANADORES|ABO|POSD ID",
-   "s": 17087,
+   "s": 19985,
    "l": 10
   },
   {
    "d": "2026-08-21",
    "a": "act_763369709939342",
    "c": "🟡15-07|NEXORA|BURURAN|CBO| ADS 1",
-   "s": 52783,
-   "l": 47
+   "s": 57666,
+   "l": 56
   },
   {
    "d": "2026-08-21",
    "a": "act_763369709939342",
    "c": "🔵28-07|NEXORA|BURURAN|CBO",
-   "s": 35137,
-   "l": 8
+   "s": 37943,
+   "l": 9
   },
   {
    "d": "2026-08-21",
    "a": "act_763369709939342",
    "c": "🟡12-08|NEXORA|CYPERUS OIL|39.900|CBO - Copia",
-   "s": 46781,
-   "l": 47
+   "s": 49379,
+   "l": 52
   },
   {
    "d": "2026-08-21",
    "a": "act_763369709939342",
    "c": "🔵15-08|NEXORA|BURURAN|CBO|149",
-   "s": 41667,
-   "l": 8
+   "s": 45954,
+   "l": 11
   },
   {
    "d": "2026-08-21",
    "a": "act_763369709939342",
    "c": "🔴15-08|NEXORA|BURURAN|CBO|NX 1 GNADORES",
-   "s": 45733,
-   "l": 27
+   "s": 51380,
+   "l": 29
   },
   {
    "d": "2026-08-21",
    "a": "act_763369709939342",
    "c": "🟡15-08|NEXORA|BURURAN|ABO|VARIACIONES",
-   "s": 37014,
-   "l": 14
-  },
-  {
-   "d": "2026-08-21",
-   "a": "act_763369709939342",
-   "c": "🟡15-08|NEXORA|CREMA LUVORA|ABO",
-   "s": 13280,
+   "s": 40199,
    "l": 15
   },
   {
    "d": "2026-08-21",
    "a": "act_763369709939342",
+   "c": "🟡15-08|NEXORA|CREMA LUVORA|ABO",
+   "s": 14260,
+   "l": 17
+  },
+  {
+   "d": "2026-08-21",
+   "a": "act_763369709939342",
    "c": "🔵15-08|NEXORA|CREMA LUVORA|CBO",
-   "s": 32803,
-   "l": 32
+   "s": 36219,
+   "l": 37
   }
  ]
 }
