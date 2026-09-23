@@ -1,6 +1,6 @@
 {
- "updated_at": "2026-09-23T19:01:35.139Z",
- "updated_at_co": "23/9/2026, 2:01:35 p. m.",
+ "updated_at": "2026-09-23T22:15:24.475Z",
+ "updated_at_co": "23/9/2026, 5:15:24 p. m.",
  "since": "2026-08-24",
  "until": "2026-09-23",
  "accounts": [
@@ -22,7 +22,7 @@
  "today": {
   "date": "2026-09-23",
   "spend": 0,
-  "leads": 2,
+  "leads": 3,
   "campaigns": [
    {
     "account": "act_2235837880587647",
@@ -78,7 +78,7 @@
     "campaign_id": "120249945528240194",
     "campaign_name": "🟡16-09|NEXORA|BURURAN|OFERTA+REGALO|CBO",
     "spend": 0,
-    "leads": 0
+    "leads": 1
    }
   ]
  },
@@ -236,7 +236,7 @@
   {
    "date": "2026-09-23",
    "spend": 0,
-   "leads": 2
+   "leads": 3
   }
  ],
  "budgets": [
@@ -2956,7 +2956,7 @@
    "a": "act_763369709939342",
    "c": "🟡16-09|NEXORA|BURURAN|OFERTA+REGALO|CBO",
    "s": 0,
-   "l": 0
+   "l": 1
   }
  ]
 }
